@@ -3,678 +3,488 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>পড়াশুনা — তৃতীয় শ্রেণীর শিক্ষা সহায়িকা</title>
+<title>সহজপড়া — তৃতীয় শ্রেণীর শিক্ষা সহায়িকা</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="apple-touch-icon" href="logo.svg">
 <style>
-  :root{
-    --bg:#f6f8fb;
-    --card:#ffffff;
-    --primary:#0f766e;
-    --primary-dark:#115e59;
-    --accent:#f59e0b;
-    --text:#0f172a;
-    --muted:#64748b;
-    --border:#e2e8f0;
-    --danger:#ef4444;
-    --success:#16a34a;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);}
-  header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:14px 18px;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.1);}
-  .nav-wrap{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .logo{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;}
-  .logo-mark{width:34px;height:34px;background:var(--accent);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#000;}
-  nav{display:flex;gap:6px;flex-wrap:wrap;}
-  nav a{color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:500;transition:.2s;font-size:15px;cursor:pointer;}
-  nav a:hover{background:rgba(255,255,255,.15);}
-  nav a.active{background:var(--accent);color:#000;font-weight:600;}
-  main{max-width:1100px;margin:24px auto;padding:0 16px 80px;}
-  .card{background:var(--card);border-radius:14px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid var(--border);margin-bottom:20px;}
-  h1,h2,h3{margin-top:0;}
-  h1{font-size:28px;color:var(--primary-dark);}
-  h2{font-size:22px;color:var(--primary-dark);}
-  .grid{display:grid;gap:16px;}
-  .grid-2{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
-  .grid-3{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
-  .tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:.2s;text-decoration:none;color:var(--text);display:block;}
-  .tile:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(15,118,110,.15);border-color:var(--primary);}
-  .tile .icon{font-size:34px;margin-bottom:8px;}
-  .tile .title{font-size:18px;font-weight:700;color:var(--primary-dark);margin-bottom:4px;}
-  .tile .desc{font-size:13px;color:var(--muted);}
-  .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:12px;}
-  .breadcrumb a{color:var(--primary);text-decoration:none;cursor:pointer;}
-  .breadcrumb span{margin:0 6px;}
-  .btn{background:var(--primary);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;transition:.2s;font-family:inherit;}
-  .btn:hover{background:var(--primary-dark);}
-  .btn.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary);}
-  .btn.accent{background:var(--accent);color:#000;}
-  .btn.danger{background:var(--danger);}
-  .btn.play{background:transparent;color:var(--primary);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:16px;cursor:pointer;}
-  .btn.play:hover{background:#ecfdf5;}
-  .btn.play.small{padding:4px 8px;font-size:14px;}
-  .btn:disabled{opacity:.6;cursor:not-allowed;}
-  textarea,input[type=text],select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit;background:#fff;resize:vertical;}
-  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,118,110,.15);}
-  .chapter{border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;}
-  .chapter-head{padding:12px 16px;background:#f1f5f9;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;gap:10px;}
-  .chapter-head:hover{background:#e2e8f0;}
-  .chapter-body{padding:16px;display:none;line-height:1.9;white-space:pre-wrap;font-size:16px;}
-  .chapter.open .chapter-body{display:block;}
-  .chapter.open .arrow{transform:rotate(90deg);}
-  .arrow{transition:.2s;}
-  .q-block{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:#fafafa;display:flex;gap:12px;align-items:flex-start;}
-  .q-block .chk{margin-top:4px;width:20px;height:20px;cursor:pointer;accent-color:var(--success);flex-shrink:0;}
-  .q-block .q-content{flex:1;min-width:0;}
-  .q{font-weight:600;color:#b45309;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between;flex-wrap:wrap;}
-  .a{line-height:1.8;color:#1e293b;margin-top:6px;display:flex;align-items:flex-start;gap:8px;}
-  .bookmark-btn{float:right;background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);}
-  .bookmark-btn.active{color:var(--accent);}
-  .hero{background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;padding:30px;border-radius:16px;margin-bottom:20px;}
-  .hero h1{color:#fff;font-size:30px;margin:0 0 8px;}
-  .hero p{opacity:.9;margin:0;font-size:16px;}
-  .tag{display:inline-block;background:#ecfdf5;color:var(--primary-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:6px;}
-  .answer-box{background:#ecfdf5;border-left:4px solid var(--primary);padding:14px 16px;border-radius:8px;margin-top:12px;line-height:1.9;}
-  .ai-answer{background:linear-gradient(135deg,#fef3c7,#fde68a);border-left:4px solid var(--accent);padding:18px;border-radius:10px;margin-top:12px;line-height:1.9;position:relative;}
-  .ai-badge{display:inline-block;background:var(--accent);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:8px;}
-  .voice-indicator{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:6px;animation:pulse 1s infinite;}
+  :root{--bg:#f6f8fb;--card:#fff;--primary:#047857;--primary-dark:#065f46;--accent:#f59e0b;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--danger:#ef4444;--success:#16a34a;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:linear-gradient(135deg,#10b981,#047857);color:#fff;padding:14px 18px;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+  .nav-wrap{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .logo{font-size:24px;font-weight:700;display:flex;align-items:center;gap:9px;cursor:pointer}
+  .logo-mark{width:38px;height:38px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  nav{display:flex;gap:6px;flex-wrap:wrap}
+  nav a{color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:500;transition:.2s;font-size:15px;cursor:pointer}
+  nav a:hover{background:rgba(255,255,255,.15)}
+  nav a.active{background:var(--accent);color:#000;font-weight:600}
+  main{max-width:1100px;margin:24px auto;padding:0 16px 80px}
+  .card{background:var(--card);border-radius:14px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid var(--border);margin-bottom:20px}
+  h1,h2,h3{margin-top:0}
+  h1{font-size:28px;color:var(--primary-dark)}
+  h2{font-size:22px;color:var(--primary-dark)}
+  .grid{display:grid;gap:16px}
+  .grid-2{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .grid-3{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:.2s;color:var(--text);display:block}
+  .tile:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(16,185,129,.15);border-color:var(--primary)}
+  .tile .icon{font-size:34px;margin-bottom:8px}
+  .tile .title{font-size:18px;font-weight:700;color:var(--primary-dark);margin-bottom:4px}
+  .tile .desc{font-size:13px;color:var(--muted)}
+  .breadcrumb{font-size:14px;color:var(--muted);margin-bottom:12px}
+  .breadcrumb a{color:var(--primary);text-decoration:none;cursor:pointer}
+  .breadcrumb span{margin:0 6px}
+  .btn{background:var(--primary);color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600;transition:.2s;font-family:inherit}
+  .btn:hover{background:var(--primary-dark)}
+  .btn.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+  .btn.accent{background:var(--accent);color:#000}
+  .btn.danger{background:var(--danger)}
+  .btn.play{background:transparent;color:var(--primary);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:16px;cursor:pointer}
+  .btn.play:hover{background:#ecfdf5}
+  .btn.play.small{padding:4px 8px;font-size:14px}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  textarea,input[type=text],select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit;background:#fff;resize:vertical}
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+  .chapter{border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
+  .chapter-head{padding:12px 16px;background:#f1f5f9;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;gap:10px}
+  .chapter-head:hover{background:#e2e8f0}
+  .chapter-body{padding:16px;display:none;line-height:1.9;white-space:pre-wrap;font-size:16px}
+  .chapter.open .chapter-body{display:block}
+  .chapter.open .arrow{transform:rotate(90deg)}
+  .arrow{transition:.2s}
+  .q-block{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:#fafafa;display:flex;gap:12px;align-items:flex-start}
+  .q-block.checked{background:#ecfdf5;border-color:#86efac}
+  .q-block .chk{margin-top:4px;width:20px;height:20px;cursor:pointer;accent-color:var(--success);flex-shrink:0}
+  .q-block .q-content{flex:1;min-width:0}
+  .q{font-weight:600;color:#b45309;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between;flex-wrap:wrap}
+  .a{line-height:1.9;color:#1e293b;margin-top:6px;display:flex;align-items:flex-start;gap:8px}
+  .bookmark-btn{background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted)}
+  .bookmark-btn.active{color:var(--accent)}
+  .hero{background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:30px;border-radius:16px;margin-bottom:20px}
+  .hero h1{color:#fff;font-size:30px;margin:0 0 8px}
+  .hero p{opacity:.95;margin:0;font-size:16px}
+  .tag{display:inline-block;background:#ecfdf5;color:var(--primary-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:6px}
+  .answer-box{background:#ecfdf5;border-left:4px solid var(--primary);padding:14px 16px;border-radius:8px;margin-top:12px;line-height:1.9}
+  .ai-answer{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left:4px solid var(--accent);padding:18px;border-radius:10px;margin-top:12px;line-height:1.9;position:relative}
+  .ai-badge{display:inline-block;background:var(--accent);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:8px}
+  .voice-ind{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:6px;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  .footer{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
-  .empty{text-align:center;padding:40px;color:var(--muted);}
-  .lesson-meta{font-size:13px;color:var(--muted);margin-bottom:10px;}
-  .book-group{margin-bottom:18px;}
-  .book-group h3{color:var(--primary-dark);border-bottom:2px solid var(--border);padding-bottom:6px;display:flex;align-items:center;gap:8px;}
-  .count-badge{background:var(--primary);color:#fff;font-size:12px;padding:2px 10px;border-radius:12px;font-weight:600;}
-  .search-filter{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;}
-  .playing{background:#fef3c7!important;box-shadow:0 0 0 3px rgba(245,158,11,.4);}
-  .loading{color:var(--muted);font-style:italic;}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);margin:0 2px;animation:bounce 1.4s infinite ease-in-out both;}
-  .dot:nth-child(1){animation-delay:-0.32s;}
-  .dot:nth-child(2){animation-delay:-0.16s;}
+  .footer{text-align:center;padding:20px;color:var(--muted);font-size:13px}
+  .empty{text-align:center;padding:40px;color:var(--muted)}
+  .lesson-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .book-group{margin-bottom:18px}
+  .book-group h3{color:var(--primary-dark);border-bottom:2px solid var(--border);padding-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .count-badge{background:var(--primary);color:#fff;font-size:12px;padding:2px 10px;border-radius:12px;font-weight:600}
+  .loading{color:var(--muted);font-style:italic}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);margin:0 2px;animation:bounce 1.4s infinite ease-in-out both}
+  .dot:nth-child(1){animation-delay:-.32s}.dot:nth-child(2){animation-delay:-.16s}
   @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-  @media (max-width:600px){
-    .hero h1{font-size:22px;}
-    nav a{padding:6px 10px;font-size:13px;}
-    .logo{font-size:18px;}
-  }
+  .src-list{margin:10px 0 0;padding-left:20px;font-size:14px;color:#78350f}
+  .src-list li{margin:3px 0}
+  .ai-controls{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .q-meta{font-size:12px;color:var(--muted);margin-top:4px}
+  @media (max-width:600px){.hero h1{font-size:22px}nav a{padding:6px 10px;font-size:13px}.logo{font-size:19px}}
 </style>
 </head>
 <body>
 <header>
-  <div class="nav-wrap">
-    <div class="logo" onclick="route('#/')">
-      <span class="logo-mark">
-        <svg viewBox="0 0 512 512" width="34" height="34" style="display:block;">
-          <circle cx="256" cy="256" r="256" fill="#f59e0b"/>
-          <path d="M110 200 Q 200 175 256 200 Q 312 175 402 200 L402 345 Q 312 320 256 345 Q 200 320 110 345 Z" fill="#fff" stroke="#b45309" stroke-width="4"/>
-          <path d="M256 200 L256 345" stroke="#0f766e" stroke-width="4"/>
-          <text x="256" y="170" text-anchor="middle" font-family="Arial" font-size="70" font-weight="900" fill="#0f766e">প</text>
-        </svg>
-      </span>
-      <span>পড়াশুনা</span>
-    </div>
-    <nav>
-      <a onclick="route('#/')" data-route="/">হোম</a>
-      <a onclick="route('#/search')" data-route="/search">খুঁজুন</a>
-      <a onclick="route('#/bookmarks')" data-route="/bookmarks">চিহ্নিত পড়া <span id="bm-count" style="background:var(--accent);color:#000;padding:1px 7px;border-radius:10px;font-size:11px;margin-left:3px;"></span></a>
-      <a onclick="route('#/classes')" data-route="/classes">শ্রেণী পাঠ</a>
-    </nav>
+<div class="nav-wrap">
+  <div class="logo" onclick="route('#/')">
+    <span class="logo-mark">
+      <svg viewBox="0 0 512 512" width="38" height="38">
+        <rect x="26" y="26" width="460" height="460" rx="110" fill="#f59e0b"/>
+        <path d="M95 200 Q200 170 256 200 Q312 170 417 200 L417 370 Q312 340 256 370 Q200 340 95 370 Z" fill="#fff" stroke="#b45309" stroke-width="4"/>
+        <path d="M256 200 L256 370" stroke="#047857" stroke-width="4"/>
+        <text x="256" y="162" text-anchor="middle" font-family="Arial" font-size="74" font-weight="900" fill="#047857">স</text>
+      </svg>
+    </span>
+    <span>সহজপড়া</span>
   </div>
+  <nav>
+    <a onclick="route('#/')" data-route="/">হোম</a>
+    <a onclick="route('#/search')" data-route="/search">খুঁজুন</a>
+    <a onclick="route('#/bookmarks')" data-route="/bookmarks">চিহ্নিত পড়া <span id="bm-count" style="background:var(--accent);color:#000;padding:1px 7px;border-radius:10px;font-size:11px;margin-left:3px;"></span></a>
+    <a onclick="route('#/classes')" data-route="/classes">শ্রেণী পাঠ</a>
+  </nav>
+</div>
 </header>
 <main id="app"></main>
-<div class="footer">© পড়াশুনা — শিক্ষা সবার জন্য</div>
+<div class="footer">© সহজপড়া — শিক্ষা সহজেই</div>
 
 <script src="bangla-data.js"></script>
 <script>
-/* =============== ডেটাসেট =============== */
-const SUBJECTS = [
-  {id:"bangla",  name:"বাংলা",             icon:"📖", color:"#dc2626", loaded:true},
-  {id:"english", name:"ইংরেজি",            icon:"🔤", color:"#2563eb", loaded:false},
-  {id:"math",    name:"গণিত",              icon:"🔢", color:"#16a34a", loaded:false},
-  {id:"islam",   name:"ইসলাম শিক্ষা",      icon:"🕌", color:"#059669", loaded:false},
-  {id:"primary", name:"প্রাথমিক জ্ঞান",    icon:"🌱", color:"#d97706", loaded:false},
-  {id:"bgs",     name:"বাংলাদেশ ও বিশ্বপরিচয়", icon:"🌍", color:"#7c3aed", loaded:false},
+const SUBJECTS=[
+  {id:"bangla",name:"বাংলা",icon:"📖",color:"#dc2626",loaded:true},
+  {id:"english",name:"ইংরেজি",icon:"🔤",color:"#2563eb",loaded:false},
+  {id:"math",name:"গণিত",icon:"🔢",color:"#16a34a",loaded:false},
+  {id:"islam",name:"ইসলাম শিক্ষা",icon:"🕌",color:"#059669",loaded:false},
+  {id:"primary",name:"প্রাথমিক জ্ঞান",icon:"🌱",color:"#d97706",loaded:false},
+  {id:"bgs",name:"বাংলাদেশ ও বিশ্বপরিচয়",icon:"🌍",color:"#7c3aed",loaded:false}
 ];
+const PLACEHOLDER={title:"[শীঘ্রই]",chapters:[{title:"অপেক্ষা করুন",body:"এই বইটি শীঘ্রই যুক্ত করা হবে। .txt ফাইল পাঠান।"}],solutions:[]};
+function getBookContent(s){return(s==="bangla"&&window.BANGLA_BOOK)?BANGLA_BOOK:PLACEHOLDER}
+function getSolutions(s){return getBookContent(s).solutions||[]}
 
-const PLACEHOLDER = {title:"[শীঘ্রই সংযোজন করা হবে]",chapters:[{title:"অপেক্ষা করুন",body:"এই বইটি শীঘ্রই যুক্ত করা হবে। দয়া করে .txt ফাইল পাঠান।"}],solutions:[]};
-function getBookContent(subj){ return (subj==="bangla" && window.BANGLA_BOOK) ? BANGLA_BOOK : PLACEHOLDER; }
-function getSolutions(subj){ return getBookContent(subj).solutions || []; }
-
-/* =============== চিহ্নিত (টিক চিহ্ন) স্টোরেজ =============== */
-const CK_KEY = "checked_reads";
-function getChecked(){ try{return JSON.parse(localStorage.getItem(CK_KEY)||"{}");}catch(e){return {};} }
-function setChecked(d){ localStorage.setItem(CK_KEY, JSON.stringify(d)); }
-function toggleCheck(subj, key, qtext){
-  const d = getChecked();
-  if(!d[subj]) d[subj] = {};
-  if(d[subj][key]) delete d[subj][key];
-  else d[subj][key] = {q:qtext, time:new Date().toISOString()};
-  setChecked(d);
-  updateBmCount();
+/* ============== চিহ্নিত স্টোরেজ ============== */
+const CK_KEY="checked_reads";
+function getChecked(){try{return JSON.parse(localStorage.getItem(CK_KEY)||"{}")}catch(e){return{}}}
+function setChecked(d){localStorage.setItem(CK_KEY,JSON.stringify(d))}
+function toggleCheck(subj,key,qtext,chkEl){
+  const d=getChecked();if(!d[subj])d[subj]={};
+  if(d[subj][key])delete d[subj][key]; else d[subj][key]={q:qtext,time:new Date().toISOString()};
+  setChecked(d);updateBmCount();
+  if(chkEl){
+    const blk=chkEl.closest(".q-block");
+    if(blk)blk.classList.toggle("checked",!!d[subj][key]);
+  }
+  // রিফ্রেশ করব যদি চিহ্নিত পড়া পেজে থাকি
+  if((window.location.hash||"").includes("/bookmarks"))renderBookmarks();
 }
-function isChecked(subj, key){ const d=getChecked(); return !!(d[subj] && d[subj][key]); }
-function uncheck(subj, key){ const d=getChecked(); if(d[subj] && d[subj][key]){delete d[subj][key]; setChecked(d); updateBmCount();} }
-function countChecked(){ const d=getChecked(); let n=0; Object.keys(d).forEach(s=>n+=Object.keys(d[s]||{}).length); return n; }
-function updateBmCount(){
-  const n = countChecked();
-  const el = document.getElementById("bm-count");
-  if(el) el.textContent = n>0 ? n : "";
-}
+function isChecked(s,k){const d=getChecked();return!!(d[s]&&d[s][k])}
+function uncheck(s,k){const d=getChecked();if(d[s]&&d[s][k]){delete d[s][k];setChecked(d);updateBmCount();renderBookmarks()}}
+function countChecked(){const d=getChecked();let n=0;Object.keys(d).forEach(s=>n+=Object.keys(d[s]||{}).length);return n}
+function updateBmCount(){const n=countChecked();const el=document.getElementById("bm-count");if(el)el.textContent=n>0?n:""}
 
-/* =============== বুকমার্ক (★) স্টোরেজ =============== */
-function getBookmarks(){ try{return JSON.parse(localStorage.getItem("bookmarks")||"[]");}catch(e){return[];} }
-function setBookmarks(b){ localStorage.setItem("bookmarks",JSON.stringify(b)); }
-function toggleBookmark(id, text){
-  const b = getBookmarks(); const i=b.findIndex(x=>x.id===id);
-  if(i>=0)b.splice(i,1); else b.push({id,text,time:new Date().toISOString()});
-  setBookmarks(b);
-}
-function isBookmarked(id){ return getBookmarks().some(x=>x.id===id); }
+/* ============== বুকমার্ক ============== */
+function getBookmarks(){try{return JSON.parse(localStorage.getItem("bookmarks")||"[]")}catch(e){return[]}}
+function setBookmarks(b){localStorage.setItem("bookmarks",JSON.stringify(b))}
+function toggleBookmark(id,text){const b=getBookmarks();const i=b.findIndex(x=>x.id===id);if(i>=0)b.splice(i,1);else b.push({id,text,time:new Date().toISOString()});setBookmarks(b)}
+function isBookmarked(id){return getBookmarks().some(x=>x.id===id)}
 
-/* =============== TTS — উচ্চস্বরে পড়া (মহিলা কন্ঠ) =============== */
-let currentUtter = null;
-let currentBtn = null;
+/* ============== TTS (মহিলা কন্ঠ) ============== */
+let currentUtter=null,currentBtn=null;
 function getFemaleVoice(){
-  const voices = speechSynthesis.getVoices();
-  // বাংলা মহিলা কন্ঠ খুঁজি
-  let bn = voices.filter(v=>v.lang.toLowerCase().startsWith("bn"));
-  // Female নির্দেশক শব্দ থাকলে
-  let female = bn.find(v=>/female|woman|মহিলা|bangla.*female|bn.*female/i.test(v.name));
-  if(female) return female;
-  // যেকোনো বাংলা female (কখনো কখনো "Kalpana", "Bengali (India) Female")
-  female = bn.find(v=>!/male|পুরুষ/i.test(v.name));
-  if(female) return female;
-  // প্রথম বাংলা voice
-  if(bn[0]) return bn[0];
-  // English female fallback
-  return voices.find(v=>v.lang.startsWith("en") && /female/i.test(v.name)) || voices[0];
+  const voices=window.speechSynthesis?speechSynthesis.getVoices():[];
+  let bn=voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith("bn"));
+  let f=bn.find(v=>/female|woman|kalpana|bangla.*female|indica|femail/i.test(v.name));
+  if(f)return f;
+  f=bn.find(v=>!/male|পুরুষ/i.test(v.name));
+  if(f)return f;
+  if(bn[0])return bn[0];
+  return voices.find(v=>v.lang&&v.lang.startsWith("en")&&/female/i.test(v.name))||voices[0];
 }
-// voices লোড হওয়ার জন্য
-if("speechSynthesis" in window){
-  speechSynthesis.onvoiceschanged = ()=>{};
-}
-function speak(text, btn){
-  if(!("speechSynthesis" in window)){ alert("😕 আপনার ব্রাউজার পড়ে শোনানো সমর্থন করে না।"); return; }
-  stopSpeaking();
-  if(!text || !text.trim()) return;
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "bn-BD";
-  u.rate = 0.95;
-  u.pitch = 1.1;
-  const v = getFemaleVoice();
-  if(v){ u.voice = v; u.lang = v.lang; }
-  u.onstart = ()=>{ currentUtter=u; if(btn){btn.classList.add("playing"); currentBtn=btn;} };
-  u.onend = ()=>{ stopSpeaking(); };
-  u.onerror = ()=>{ stopSpeaking(); };
+if("speechSynthesis"in window)speechSynthesis.onvoiceschanged=()=>{};
+function speak(text,btn){
+  if(!("speechSynthesis"in window)){alert("আপনার ব্রাউজার উচ্চস্বরে পড়া সমর্থন করে না।");return}
+  stopSpeaking();if(!text||!text.trim())return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="bn-BD";u.rate=0.95;u.pitch=1.1;
+  const v=getFemaleVoice();if(v){u.voice=v;u.lang=v.lang}
+  u.onstart=()=>{currentUtter=u;if(btn){btn.classList.add("playing");currentBtn=btn}};
+  u.onend=()=>stopSpeaking();u.onerror=()=>stopSpeaking();
   speechSynthesis.speak(u);
 }
-function stopSpeaking(){
-  if("speechSynthesis" in window) speechSynthesis.cancel();
-  if(currentBtn){currentBtn.classList.remove("playing"); currentBtn=null;}
-  currentUtter=null;
-}
-function playButton(text, small=false){
-  return `<button class="btn play ${small?'small':''}" onclick="event.stopPropagation();speak(this.dataset.t,this)" data-t="${text.replace(/"/g,'&quot;')}" title="পড়ে শুনুন">🔊</button>`;
+function stopSpeaking(){if("speechSynthesis"in window)speechSynthesis.cancel();if(currentBtn){currentBtn.classList.remove("playing");currentBtn=null}currentUtter=null}
+function playButton(text,small){
+  const safe=String(text).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  return `<button class="btn play ${small?'small':''}" onclick="event.stopPropagation();speak(this.dataset.t,this)" data-t="${safe}" title="পড়ে শুনুন">🔊</button>`;
 }
 
-/* =============== রাউটার =============== */
-const app = document.getElementById("app");
-function route(hash){ window.location.hash = hash; }
-
+/* ============== Router ============== */
+const app=document.getElementById("app");
+function route(h){window.location.hash=h}
 function getPathParts(){
-  const hash = window.location.hash || "#/";
-  const [p, q] = hash.replace(/^#/,"").split("?");
-  return {parts: (p||"/").split("/").filter(Boolean), params: new URLSearchParams(q||"")};
+  const hash=window.location.hash||"#/";const[p,q]=hash.replace(/^#/,"").split("?");
+  return{parts:(p||"/").split("/").filter(Boolean),params:new URLSearchParams(q||"")}
 }
-
 function render(){
-  stopSpeaking();
-  const {parts, params} = getPathParts();
-  const hash = window.location.hash || "#/";
-  document.querySelectorAll("nav a").forEach(a=>{
-    a.classList.toggle("active", a.dataset.route && hash.startsWith("#"+a.dataset.route));
-  });
-  window.scrollTo(0,0);
-  updateBmCount();
+  stopSpeaking();const{parts,params}=getPathParts();const hash=window.location.hash||"#/";
+  document.querySelectorAll("nav a").forEach(a=>{a.classList.toggle("active",a.dataset.route&&hash.startsWith("#"+a.dataset.route))});
+  window.scrollTo(0,0);updateBmCount();
   try{
-    if(parts.length===0) return renderHome();
-    if(parts[0]==="search") return renderSearch();
-    if(parts[0]==="bookmarks") return renderBookmarks();
-    if(parts[0]==="classes") return renderClasses();
-    if(parts[0]==="class" && parts[1]==="3"){
-      if(parts[2]==="book") return renderSubjectList("book");
-      if(parts[2]==="solution") return renderSubjectList("solution");
+    if(parts.length===0)return renderHome();
+    if(parts[0]==="search")return renderSearch();
+    if(parts[0]==="bookmarks")return renderBookmarks();
+    if(parts[0]==="classes")return renderClasses();
+    if(parts[0]==="class"&&parts[1]==="3"){
+      if(parts[2]==="book")return renderSubjectList("book");
+      if(parts[2]==="solution")return renderSubjectList("solution");
       return renderClass3();
     }
-    if(parts[0]==="book" && parts[1]) return renderBook(parts[1]);
-    if(parts[0]==="solution" && parts[1]) return renderSolution(parts[1]);
-  }catch(err){
-    app.innerHTML = `<div class="card"><h2>ত্রুটি</h2><p>${err.message}</p></div>`;
-    return;
-  }
-  app.innerHTML = `<div class="card empty"><h2>৪০৪ — পাওয়া যায়নি</h2><p>পেজটি খুঁজে পাওয়া যায়নি।</p><button class="btn" onclick="route('#/')">হোমে ফিরুন</button></div>`;
+    if(parts[0]==="book"&&parts[1])return renderBook(parts[1]);
+    if(parts[0]==="solution"&&parts[1])return renderSolution(parts[1]);
+  }catch(err){app.innerHTML=`<div class="card"><h2>ত্রুটি</h2><p>${esc(err.message)}</p></div>`;return}
+  app.innerHTML=`<div class="card empty"><h2>৪০৪</h2><p>পেজটি পাওয়া যায়নি।</p><button class="btn" onclick="route('#/')">হোমে ফিরুন</button></div>`;
 }
-window.addEventListener("hashchange", render);
-window.addEventListener("load", ()=>{
-  // Voice list লোড করানো
-  if("speechSynthesis" in window){ speechSynthesis.getVoices(); }
-  render();
-});
+window.addEventListener("hashchange",render);
+window.addEventListener("load",()=>{if("speechSynthesis"in window)speechSynthesis.getVoices();render()});
 
-/* =============== পেজ রেন্ডারার =============== */
+/* ============== Pages ============== */
 function renderHome(){
-  app.innerHTML = `
-    <div class="hero">
-      <h1>স্বাগতম পড়াশুনায়! 📚</h1>
-      <p>তৃতীয় শ্রেণীর সব বই, সমাধান, AI সার্চ ও অডিও — সবকিছু এক জায়গায়।</p>
-      <div style="margin-top:14px;">
-        <span class="tag">বাংলা বই সম্পূর্ণ ✅</span>
-        <span class="tag">টিক চিহ্নিত করা ⭐</span>
-        <span class="tag">AI উত্তর 🤖</span>
-        <span class="tag">মহিলা কন্ঠে 🔊</span>
-      </div>
+  app.innerHTML=`
+  <div class="hero">
+    <h1>স্বাগতম সহজপড়ায়! 📖</h1>
+    <p>তৃতীয় শ্রেণীর বই, সমাধান, চিহ্নিত করা পড়া ও AI-চালিত স্মার্ট সার্চ — সবকিছু সহজেই।</p>
+    <div style="margin-top:14px">
+      <span class="tag">বাংলা বই সম্পূর্ণ ✅</span>
+      <span class="tag">টিক চিহ্নিতকরণ ☑️</span>
+      <span class="tag">লাইভ AI 🤖</span>
     </div>
-    <div class="grid grid-2">
-      <a class="tile" onclick="route('#/classes')">
-        <div class="icon">🏫</div>
-        <div class="title">শ্রেণী পাঠ</div>
-        <div class="desc">তৃতীয় শ্রেণীর বই ও সমাধান পড়ুন</div>
-      </a>
-      <a class="tile" onclick="route('#/search')">
-        <div class="icon">🔍</div>
-        <div class="title">খুঁজুন (AI)</div>
-        <div class="desc">লিখে বা ভয়েসে প্রশ্ন করুন, AI উত্তর দেবে ও পড়ে শুনাবে</div>
-      </a>
-      <a class="tile" onclick="route('#/bookmarks')">
-        <div class="icon">✅</div>
-        <div class="title">চিহ্নিত পড়া</div>
-        <div class="desc">টিক দিয়ে চিহ্নিত প্রশ্নগুলো এখানে পাবেন</div>
-      </a>
-      <a class="tile" onclick="route('#/book/bangla')">
-        <div class="icon">📖</div>
-        <div class="title">আমার বাংলা বই</div>
-        <div class="desc">সম্পূর্ণ বাংলা বই (পাঠ+শব্দ শিখি+অনুশীলনী)</div>
-      </a>
-    </div>
-    <div class="card">
-      <h2>📝 নতুন ফিচার</h2>
-      <ul style="line-height:1.9">
-        <li>✅ <strong>টিক চিহ্নিতকরণ:</strong> সমাধান পেজে প্রতিটি প্রশ্নের বাম পাশে চেকবক্সে টিক দিয়ে প্রশ্ন চিহ্নিত করুন; সব চিহ্নিত প্রশ্ন 'চিহ্নিত পড়া' মেনুতে বইভিত্তিক সাজানো থাকবে। টিক তুললে বাদ যাবে।</li>
-        <li>🤖 <strong>AI উত্তর:</strong> খুঁজুন পেজে প্রশ্ন করলে বই থেকে প্রাসঙ্গিক তথ্য নিয়ে AI সুন্দর উত্তর তৈরি করে দেবে।</li>
-        <li>🔊 <strong>পড়ে শুনানো:</strong> বাংলাদেশি মহিলা কন্ঠে উত্তর ও প্রতিটি প্রশ্ন-উত্তরের পাশে 🔊 বাটন।</li>
-      </ul>
-    </div>`;
+  </div>
+  <div class="grid grid-2">
+    <a class="tile" onclick="route('#/classes')"><div class="icon">🏫</div><div class="title">শ্রেণী পাঠ</div><div class="desc">তৃতীয় শ্রেণীর বই ও সমাধান</div></a>
+    <a class="tile" onclick="route('#/search')"><div class="icon">🔍</div><div class="title">খুঁজুন (AI)</div><div class="desc">লিখে বা ভয়েসে প্রশ্ন করুন, AI উত্তর দেবে</div></a>
+    <a class="tile" onclick="route('#/bookmarks')"><div class="icon">☑️</div><div class="title">চিহ্নিত পড়া</div><div class="desc">গুরুত্বপূর্ণ প্রশ্ন টিক দিয়ে রাখুন</div></a>
+    <a class="tile" onclick="route('#/book/bangla')"><div class="icon">📖</div><div class="title">আমার বাংলা বই</div><div class="desc">সম্পূর্ণ পাঠ + শব্দ শিখি + অনুশীলনী</div></a>
+  </div>`;
 }
-
 function renderClasses(){
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>শ্রেণী পাঠ</div>
-    <div class="card"><h1>🏫 শ্রেণী পাঠ</h1><p style="color:var(--muted)">একটি শ্রেণী বেছে নিন:</p></div>
-    <div class="grid grid-3">
-      <a class="tile" onclick="route('#/class/3')"><div class="icon">3️⃣</div><div class="title">তৃতীয় শ্রেণী</div><div class="desc">মূল বই ও সমাধান</div></a>
-      ${[4,5].map(n=>`<div class="tile" style="opacity:.5;cursor:not-allowed;"><div class="icon">${n}️⃣</div><div class="title">${n==4?"চতুর্থ":"পঞ্চম"} শ্রেণী</div><div class="desc">শীঘ্রই আসছে</div></div>`).join("")}
-    </div>`;
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>শ্রেণী পাঠ</div>
+  <div class="card"><h1>🏫 শ্রেণী পাঠ</h1></div>
+  <div class="grid grid-3">
+    <a class="tile" onclick="route('#/class/3')"><div class="icon">3️⃣</div><div class="title">তৃতীয় শ্রেণী</div><div class="desc">মূল বই ও সমাধান</div></a>
+    ${[4,5].map(n=>`<div class="tile" style="opacity:.5;cursor:not-allowed"><div class="icon">${n}️⃣</div><div class="title">${n==4?"চতুর্থ":"পঞ্চম"} শ্রেণী</div><div class="desc">শীঘ্রই</div></div>`).join("")}
+  </div>`;
 }
-
 function renderClass3(){
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span>তৃতীয় শ্রেণী</div>
-    <div class="card"><h1>3️⃣ তৃতীয় শ্রেণী</h1><p style="color:var(--muted)">আপনি কী দেখতে চান?</p></div>
-    <div class="grid grid-2">
-      <a class="tile" onclick="route('#/class/3/book')"><div class="icon">📚</div><div class="title">মূল বই</div><div class="desc">বিষয়ভিত্তিক পাঠ্যবই পড়ুন</div></a>
-      <a class="tile" onclick="route('#/class/3/solution')"><div class="icon">✅</div><div class="title">সমাধান</div><div class="desc">অনুশীলনীর প্রশ্ন, সমাধান ও টিক চিহ্নিতকরণ</div></a>
-    </div>`;
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span>তৃতীয় শ্রেণী</div>
+  <div class="card"><h1>3️⃣ তৃতীয় শ্রেণী</h1></div>
+  <div class="grid grid-2">
+    <a class="tile" onclick="route('#/class/3/book')"><div class="icon">📚</div><div class="title">মূল বই</div><div class="desc">বিষয়ভিত্তিক পাঠ্যবই</div></a>
+    <a class="tile" onclick="route('#/class/3/solution')"><div class="icon">✅</div><div class="title">সমাধান</div><div class="desc">প্রশ্নোত্তর ও টিক চিহ্নিতকরণ</div></a>
+  </div>`;
 }
-
 function renderSubjectList(mode){
-  const base = mode==="book" ? "#/book/" : "#/solution/";
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span>${mode==="book"?"মূল বই":"সমাধান"}</div>
-    <div class="card"><h1>${mode==="book"?"📚 মূল বই":"✅ সমাধান"} — বিষয় নির্বাচন</h1></div>
-    <div class="grid grid-3">
-      ${SUBJECTS.map(s=>{
-        const book=getBookContent(s.id); const sols=getSolutions(s.id);
-        return s.loaded?`<a class="tile" onclick="route('${base}${s.id}')"><div class="icon">${s.icon}</div><div class="title" style="color:${s.color}">${s.name}</div><div class="desc">${book.chapters.length}টি অধ্যায়${mode==="solution"?` · ${sols.length}টি প্রশ্ন`:""}</div></a>`
-        :`<div class="tile" style="opacity:.6;cursor:not-allowed;"><div class="icon">${s.icon}</div><div class="title" style="color:${s.color}">${s.name} <span style='font-size:11px;color:#999;'>(শীঘ্রই)</span></div><div class="desc">ফাইল পেলে যুক্ত করা হবে</div></div>`;
-      }).join("")}
-    </div>`;
+  const base=mode==="book"?"#/book/":"#/solution/";
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span>${mode==="book"?"মূল বই":"সমাধান"}</div>
+  <div class="card"><h1>${mode==="book"?"📚 মূল বই":"✅ সমাধান"} — বিষয় নির্বাচন</h1></div>
+  <div class="grid grid-3">
+    ${SUBJECTS.map(s=>{const b=getBookContent(s.id);const sols=getSolutions(s.id);
+      return s.loaded?`<a class="tile" onclick="route('${base}${s.id}')"><div class="icon">${s.icon}</div><div class="title" style="color:${s.color}">${s.name}</div><div class="desc">${b.chapters.length}টি অধ্যায়${mode==="solution"?` · ${sols.length}টি প্রশ্ন`:""}</div></a>`
+      :`<div class="tile" style="opacity:.6;cursor:not-allowed"><div class="icon">${s.icon}</div><div class="title" style="color:${s.color}">${s.name} <span style='font-size:11px;color:#999'>(শীঘ্রই)</span></div><div class="desc">ফাইল পাঠালে যুক্ত হবে</div></div>`;
+    }).join("")}
+  </div>`;
 }
-
 function renderBook(subj){
-  const s = SUBJECTS.find(x=>x.id===subj); if(!s) throw new Error("বিষয় পাওয়া যায়নি");
-  const book = getBookContent(subj);
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span><a onclick="route('#/class/3/book')">মূল বই</a><span>›</span>${s.name}</div>
-    <div class="card">
-      <h1>${s.icon} ${book.title}</h1>
-      <div class="lesson-meta">মোট ${book.chapters.length}টি অধ্যায়</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn secondary" onclick="route('#/solution/${subj}')">📝 সমাধান দেখুন</button>
-        <button class="btn accent" onclick="route('#/search?subject=${subj}')">🔍 AI-এ খুঁজুন</button>
-        <button class="btn" onclick="openAllChapters()">সব খুলুন</button>
-        <button class="btn secondary" onclick="closeAllChapters()">সব বন্ধ করুন</button>
-        <button class="btn play" onclick="speakChapters()">🔊 সব পড়ে শুনান</button>
-      </div>
+  const s=SUBJECTS.find(x=>x.id===subj);if(!s)throw new Error("বিষয় পাওয়া যায়নি");const b=getBookContent(subj);
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span><a onclick="route('#/class/3/book')">মূল বই</a><span>›</span>${s.name}</div>
+  <div class="card"><h1>${s.icon} ${b.title}</h1>
+    <div class="lesson-meta">মোট ${b.chapters.length}টি অধ্যায়</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" onclick="route('#/solution/${subj}')">📝 সমাধান</button>
+      <button class="btn accent" onclick="route('#/search?subject=${subj}')">🤖 AI-এ খুঁজুন</button>
+      <button class="btn" onclick="openAll()">সব খুলুন</button>
+      <button class="btn secondary" onclick="closeAll()">সব বন্ধ</button>
     </div>
-    <div class="card">
-      ${book.chapters.map((ch,i)=>{
-        const cid=`book-${subj}-${i}`, bid=`bm-${cid}`;
-        return `<div class="chapter" id="${cid}">
-          <div class="chapter-head" onclick="toggleChapter('${cid}')">
-            <span>${escapeHtml(ch.title)}</span>
-            <span style="display:flex;align-items:center;gap:8px;">
-              ${playButton(ch.title+"। "+ch.body, true)}
-              <button class="bookmark-btn ${isBookmarked(bid)?"active":""}" onclick="event.stopPropagation();doBookmark('${bid}',${JSON.stringify(ch.title)},this)" title="বুকমার্ক">★</button>
-              <span class="arrow">▶</span>
-            </span>
-          </div>
-          <div class="chapter-body">${escapeHtml(ch.body)}</div>
-        </div>`;
-      }).join("")}
-    </div>`;
+  </div>
+  <div class="card">
+    ${b.chapters.map((c,i)=>{const cid=`bk-${subj}-${i}`,bid=`bm-${cid}`;
+      return`<div class="chapter" id="${cid}">
+        <div class="chapter-head" onclick="toggleChapter('${cid}')">
+          <span>${esc(c.title)}</span>
+          <span style="display:flex;gap:8px;align-items:center;">
+            ${playButton(c.title+"। "+c.body,1)}
+            <button class="bookmark-btn ${isBookmarked(bid)?"active":""}" onclick="event.stopPropagation();doBm('${bid}',${attr(c.title)},this)">★</button>
+            <span class="arrow">▶</span>
+          </span>
+        </div>
+        <div class="chapter-body">${esc(c.body)}</div>
+      </div>`}).join("")}
+  </div>`;
 }
-function openAllChapters(){document.querySelectorAll(".chapter").forEach(c=>c.classList.add("open"));}
-function closeAllChapters(){document.querySelectorAll(".chapter").forEach(c=>c.classList.remove("open"));}
-function speakChapters(){
-  const book=getBookContent("bangla");
-  const txt = book.title + "। " + book.chapters.map(c=>c.title+"। "+c.body).join(" ");
-  speak(txt);
-}
+function openAll(){document.querySelectorAll(".chapter").forEach(c=>c.classList.add("open"))}
+function closeAll(){document.querySelectorAll(".chapter").forEach(c=>c.classList.remove("open"))}
+function toggleChapter(id){document.getElementById(id).classList.toggle("open")}
+function doBm(id,txt,btn){toggleBookmark(id,txt);btn.classList.toggle("active")}
 
 function renderSolution(subj){
-  const s = SUBJECTS.find(x=>x.id===subj); if(!s) throw new Error("বিষয় পাওয়া যায়নি");
-  const sols = getSolutions(subj);
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span><a onclick="route('#/class/3/solution')">সমাধান</a><span>›</span>${s.name}</div>
-    <div class="card">
-      <h1>✅ ${s.name} — সমাধান</h1>
-      <div class="lesson-meta">মোট ${sols.length}টি প্রশ্নোত্তর — টিক দিয়ে চিহ্নিত করুন ✅</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn secondary" onclick="route('#/book/${subj}')">📖 মূল বই দেখুন</button>
-        <button class="btn accent" onclick="route('#/search?subject=${subj}')">🔍 AI-এ খুঁজুন</button>
-        <input type="text" id="solSearch" placeholder="প্রশ্ন খুঁজুন..." oninput="filterSolutions()" style="flex:1;min-width:200px;"/>
-      </div>
-      <div style="margin-top:10px;font-size:13px;color:var(--muted);">
-        💡 প্রতিটি প্রশ্নের বাম পাশের বক্সে টিক (✔) দিয়ে প্রশ্নটি 'চিহ্নিত পড়া' পেজে সংরক্ষণ করুন।
-      </div>
+  const s=SUBJECTS.find(x=>x.id===subj);if(!s)throw new Error("বিষয় পাওয়া যায়নি");const sols=getSolutions(subj);
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span><a onclick="route('#/classes')">শ্রেণী পাঠ</a><span>›</span><a onclick="route('#/class/3')">তৃতীয় শ্রেণী</a><span>›</span><a onclick="route('#/class/3/solution')">সমাধান</a><span>›</span>${s.name}</div>
+  <div class="card"><h1>✅ ${s.name} — সমাধান</h1>
+    <div class="lesson-meta">মোট ${sols.length}টি প্রশ্নোত্তর — ☑️ বাম পাশের বক্সে টিক দিয়ে চিহ্নিত করুন</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary" onclick="route('#/book/${subj}')">📖 মূল বই</button>
+      <button class="btn accent" onclick="route('#/search?subject=${subj}')">🤖 AI-এ খুঁজুন</button>
+      <input type="text" id="solSearch" placeholder="প্রশ্ন খুঁজুন..." oninput="filterSol()" style="flex:1;min-width:200px"/>
     </div>
-    <div class="card" id="solList">
-      ${sols.length===0?`<div class="empty">এই বিষয়ের সমাধান শীঘ্রই যোগ করা হবে।</div>`:
-        sols.map((item,i)=>{
-          const qid=`sol-${subj}-${i}`;
-          const checked = isChecked(subj, qid);
-          return `
-          <div class="q-block" data-q="${escapeHtml(item.q)}">
-            <input type="checkbox" class="chk" ${checked?"checked":""} onchange="toggleCheck('${subj}','${qid}',${JSON.stringify(item.q)})" title="চিহ্নিত করুন">
-            <div class="q-content">
-              <div class="q">
-                <span>${escapeHtml(item.q)}</span>
-                <span style="display:flex;gap:4px;">${playButton(item.q,true)}</span>
-              </div>
-              <div class="a">
-                <span style="color:var(--primary-dark);font-weight:600;min-width:80px;">✍️ উত্তর:</span>
-                <span style="flex:1;">${escapeHtml(item.a)}</span>
-                <span>${playButton(item.a,true)}</span>
-              </div>
-            </div>
-          </div>`;
-        }).join("")}
-    </div>`;
+  </div>
+  <div class="card" id="solList">
+    ${sols.length===0?`<div class="empty">এই বিষয়ের সমাধান শীঘ্রই।</div>`:
+    sols.map((it,i)=>{const qid=`sol-${subj}-${i}`,checked=isChecked(subj,qid);
+      return`<div class="q-block ${checked?'checked':''}" data-q="${esc(it.q)}">
+        <input type="checkbox" class="chk" ${checked?"checked":""} onchange="toggleCheck('${subj}','${qid}',this.dataset.q,this)" data-q="${attr(it.q)}" title="চিহ্নিত করুন">
+        <div class="q-content">
+          <div class="q"><span>${esc(it.q)}</span><span>${playButton(it.q,1)}</span></div>
+          <div class="a"><span style="color:var(--primary-dark);font-weight:600;min-width:80px;">✍️ উত্তর:</span>
+            <span style="flex:1">${esc(it.a)}</span>${playButton(it.a,1)}
+          </div>
+        </div>
+      </div>`}).join("")}
+  </div>`;
 }
-function filterSolutions(){
-  const term=document.getElementById("solSearch").value.toLowerCase().trim();
-  document.querySelectorAll("#solList .q-block").forEach(bl=>{
-    bl.style.display = (!term||bl.dataset.q.toLowerCase().includes(term)) ? "flex" : "none";
-  });
-}
+function filterSol(){const t=document.getElementById("solSearch").value.toLowerCase().trim();
+  document.querySelectorAll("#solList .q-block").forEach(b=>{b.style.display=(!t||b.dataset.q.toLowerCase().includes(t))?"flex":"none"})}
 
 function renderBookmarks(){
-  const d = getChecked();
-  let total = 0;
-  Object.keys(d).forEach(s=>total+=Object.keys(d[s]||{}).length);
-  let html = `<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>চিহ্নিত পড়া</div>
-    <div class="card"><h1>✅ চিহ্নিত পড়া</h1><p style="color:var(--muted)">আপনার টিক দিয়ে চিহ্নিত করা প্রশ্নসমূহ — বইভিত্তিক সাজানো। মোট: <strong>${total}</strong>টি</p>
-    ${total>0?`<button class="btn danger" onclick="clearAllChecked()">সব টিক মুছে ফেলুন</button>`:""}</div>`;
+  const d=getChecked();let total=0;Object.keys(d).forEach(s=>total+=Object.keys(d[s]||{}).length);
+  let h=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>চিহ্নিত পড়া</div>
+  <div class="card"><h1>☑️ চিহ্নিত পড়া</h1><p style="color:var(--muted)">আপনার টিক দিয়ে চিহ্নিত করা প্রশ্নসমূহ — বইভিত্তিক। মোট: <strong>${total}</strong>টি</p>
+  ${total>0?`<button class="btn danger" onclick="clearAll()">সব টিক সরান</button>`:""}</div>`;
   if(total===0){
-    html += `<div class="card"><div class="empty">এখনো কোনো প্রশ্ন টিক চিহ্নিত করা হয়নি।<br>সমাধান পেজে গিয়ে প্রশ্নের বাম পাশের বক্সে টিক দিন ✅</div></div>`;
-  } else {
-    html += `<div class="card">`;
+    h+=`<div class="card"><div class="empty">এখনো কোনো প্রশ্ন চিহ্নিত করা হয়নি।<br>সমাধান পেজে গিয়ে ☑️ টিক দিন।</div></div>`;
+  }else{
+    h+=`<div class="card">`;
     SUBJECTS.filter(s=>s.loaded).forEach(s=>{
-      const items = d[s.id];
-      if(!items || Object.keys(items).length===0) return;
-      html += `<div class="book-group">
-        <h3>${s.icon} ${s.name} <span class="count-badge">${Object.keys(items).length}</span>
-        <button class="btn play" style="margin-left:auto;" onclick="speakGroup('${s.id}')">🔊 সবগুলো একসাথে শুনুন</button>
-        </h3>`;
-      Object.keys(items).forEach(k=>{
-        const it = items[k];
-        html += `<div class="q-block">
-          <input type="checkbox" class="chk" checked onchange="toggleCheck('${s.id}','${k}','');renderBookmarks();">
+      const items=d[s.id];if(!items||!Object.keys(items).length)return;
+      h+=`<div class="book-group"><h3>${s.icon} ${s.name} <span class="count-badge">${Object.keys(items).length}</span>
+        <button class="btn play" style="margin-left:auto" onclick="speakGroup('${s.id}')">🔊 সব শুনুন</button></h3>`;
+      Object.keys(items).forEach(k=>{const it=items[k];
+        h+=`<div class="q-block checked">
+          <input type="checkbox" class="chk" checked onchange="toggleCheck('${s.id}','${k}','',this);renderBookmarks();">
           <div class="q-content">
-            <div class="q"><span>${escapeHtml(it.q)}</span><span>${playButton(it.q,true)}</span></div>
-            <div class="lesson-meta">চিহ্নিত করা: ${new Date(it.time).toLocaleString("bn-BD")}</div>
-          </div>
-        </div>`;
-      });
-      html += `</div>`;
+            <div class="q"><span>${esc(it.q)}</span><span>${playButton(it.q,1)}</span></div>
+            <div class="q-meta">চিহ্নিত: ${new Date(it.time).toLocaleString("bn-BD")}</div>
+          </div></div>`;});
+      h+=`</div>`;
     });
-    html += `</div>`;
+    h+=`</div>`;
   }
-  // পুরানো ★ বুকমার্কও দেখাও যদি থাকে
-  const bm = getBookmarks();
-  if(bm.length>0){
-    html += `<div class="card"><h2>⭐ পুরনো বুকমার্ক</h2>
-      ${bm.map(x=>`<div class="q-block"><div class="q-content"><div class="q">${escapeHtml(x.text)}</div>
-      <button class="btn danger" style="margin-top:6px;font-size:12px;padding:4px 10px;" onclick="removeBm('${x.id}')">সরান</button></div></div>`).join("")}
-    </div>`;
+  const bm=getBookmarks();
+  if(bm.length){
+    h+=`<div class="card"><h2>⭐ বুকমার্ক</h2>${bm.map(x=>`<div class="q-block"><div class="q-content">
+      <div class="q">${esc(x.text)}</div>
+      <button class="btn danger" style="font-size:12px;padding:4px 10px;margin-top:6px" onclick="remBm('${x.id}')">সরান</button></div></div>`).join("")}</div>`;
   }
-  app.innerHTML = html;
+  app.innerHTML=h;
 }
-function clearAllChecked(){
-  if(confirm("সব টিক চিহ্ন মুছে ফেলবেন?")){
-    setChecked({}); updateBmCount(); renderBookmarks();
-  }
-}
-function speakGroup(subj){
-  const d = getChecked();
-  const items = d[subj]||{};
-  const s = SUBJECTS.find(x=>x.id===subj);
-  let txt = `${s.name} বইয়ের চিহ্নিত প্রশ্নসমূহ। `;
-  Object.values(items).forEach((it,i)=>{
-    txt += `প্রশ্ন ${i+1}: ${it.q}? উত্তর: ${getSolutions(subj).find(x=>x.q===it.q)?.a||""}। `;
-  });
+function clearAll(){if(confirm("সব টিক মুছে ফেলবেন?")){setChecked({});updateBmCount();renderBookmarks()}}
+function speakGroup(sid){
+  const d=getChecked();const items=d[sid]||{};const s=SUBJECTS.find(x=>x.id===sid);
+  let txt=`${s.name} বইয়ের চিহ্নিত প্রশ্ন। `;let n=0;
+  Object.values(items).forEach(it=>{const sa=getSolutions(sid).find(x=>x.q===it.q);n++;
+    txt+=`প্রশ্ন ${n}: ${it.q}? উত্তর: ${sa?sa.a:""}। `});
   speak(txt);
 }
-function removeBm(id){
-  setBookmarks(getBookmarks().filter(x=>x.id!==id)); renderBookmarks();
-}
+function remBm(id){setBookmarks(getBookmarks().filter(x=>x.id!==id));renderBookmarks()}
 
-/* =============== AI উত্তর সিস্টেম =============== */
-let recognition = null;
-let isListening = false;
-
+/* ============== AI Answer (Live-style synthesis from book) ============== */
+let recog=null,listening=false;
 function renderSearch(){
-  const {params} = getPathParts();
-  const preset = params.get("subject")||"";
-  app.innerHTML = `
-    <div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>খুঁজুন</div>
-    <div class="card">
-      <h1>🔍 AI-এর সাহায্যে খুঁজুন</h1>
-      <p style="color:var(--muted)">প্রশ্ন লিখুন বা 🎤 ভয়েস দিন — AI বই থেকে প্রাসঙ্গিক উত্তর তৈরি করে মহিলা কন্ঠে পড়ে শুনাবে।</p>
-      <label style="font-weight:600;display:block;margin:14px 0 6px;">আপনার প্রশ্ন:</label>
-      <textarea id="qInput" rows="3" placeholder="যেমন: পিঁপড়া ও ঘাসফড়িং-এর গল্পটি কী শিক্ষা দেয়?"></textarea>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        <button class="btn" id="searchBtn" onclick="doSearch()">উত্তর তৈরী করুন</button>
-        <button class="btn secondary" id="micBtn" onclick="toggleMic()"><span id="micIcon">🎤</span><span id="micText">ভয়েস দিন</span></button>
-        <button class="btn accent" onclick="document.getElementById('qInput').value='';document.getElementById('result').innerHTML='';document.getElementById('step2').style.display='none';">মুছুন</button>
-      </div>
-      <div id="step2" style="display:none;margin-top:16px;">
-        <label style="font-weight:600;display:block;margin-bottom:6px;">কোন বই থেকে উত্তর তৈরী করতে চান?</label>
-        <select id="bookSelect">
-          <option value="all">📚 সব বই</option>
-          ${SUBJECTS.filter(s=>s.loaded).map(s=>`<option value="${s.id}" ${preset===s.id?"selected":""}>${s.icon} ${s.name}</option>`).join("")}
-        </select>
-        <button class="btn" style="margin-top:10px;" onclick="runAIAnswer()">🤖 উত্তর বের করুন</button>
-      </div>
+  const{params}=getPathParts();const preset=params.get("subject")||"";
+  app.innerHTML=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>খুঁজুন</div>
+  <div class="card">
+    <h1>🔍 AI-এর সাহায্যে খুঁজুন</h1>
+    <p style="color:var(--muted)">প্রশ্ন লিখুন বা 🎤 ভয়েস দিন, বই বেছে নিন — AI উত্তর তৈরি করে দেবে।</p>
+    <label style="font-weight:600;display:block;margin:14px 0 6px">আপনার প্রশ্ন:</label>
+    <textarea id="qInput" rows="3" placeholder="যেমন: পিঁপড়া-ঘাসফড়িং গল্পের নৈতিক শিক্ষা কী?"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn" onclick="doSearch()">উত্তর তৈরী করুন</button>
+      <button class="btn secondary" id="micBtn" onclick="toggleMic()"><span id="micIcon">🎤</span><span id="micText">ভয়েস দিন</span></button>
+      <button class="btn accent" onclick="document.getElementById('qInput').value='';document.getElementById('result').innerHTML='';document.getElementById('step2').style.display='none';">মুছুন</button>
     </div>
-    <div class="card" id="result"></div>`;
+    <div id="step2" style="display:none;margin-top:16px">
+      <label style="font-weight:600;display:block;margin-bottom:6px">কোন বই থেকে উত্তর চান?</label>
+      <select id="bookSelect">
+        <option value="all">📚 সব বই</option>
+        ${SUBJECTS.filter(s=>s.loaded).map(s=>`<option value="${s.id}" ${preset===s.id?"selected":""}>${s.icon} ${s.name}</option>`).join("")}
+      </select>
+      <button class="btn" style="margin-top:10px" onclick="runAI()">🤖 উত্তর বের করুন</button>
+    </div>
+  </div>
+  <div class="card" id="result"></div>`;
 }
-
-function doSearch(){
-  const q=document.getElementById("qInput").value.trim();
-  if(!q){alert("প্রথমে প্রশ্ন লিখুন বা ভয়েস দিন।");return;}
+function doSearch(){const q=document.getElementById("qInput").value.trim();if(!q){alert("প্রথমে প্রশ্ন লিখুন বা ভয়েস দিন।");return}
   document.getElementById("step2").style.display="block";
-  document.getElementById("result").innerHTML = `<p style="color:var(--muted)">⬆️ দয়া করে বই নির্বাচন করুন, তারপর 'উত্তর বের করুন' চাপুন।</p>`;
-}
-
-/* AI-এর মতো উত্তর তৈরি: প্রসঙ্গ সংগ্রহ + sentence ranking + সুগঠিত জবাব */
-function runAIAnswer(){
-  const q = document.getElementById("qInput").value.trim();
-  const bookId = document.getElementById("bookSelect").value;
-  const box = document.getElementById("result");
-  box.innerHTML = `<div class="ai-answer"><span class="ai-badge">AI</span> উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
-
+  document.getElementById("result").innerHTML=`<p style="color:var(--muted)">⬆️ বই নির্বাচন করে 'উত্তর বের করুন' চাপুন।</p>`}
+function runAI(){
+  const q=document.getElementById("qInput").value.trim();const bid=document.getElementById("bookSelect").value;
+  const box=document.getElementById("result");
+  box.innerHTML=`<div class="ai-answer"><span class="ai-badge">AI</span> উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
   setTimeout(()=>{
-    const ans = generateAIAnswer(q, bookId);
-    const subj = SUBJECTS.find(s=>s.id===(bookId==="all"?"bangla":bookId));
-    const icon = subj ? subj.icon : "📚";
-    const name = subj ? subj.name : "সব বই";
-    const audioBtn = playButton(ans.text);
-    box.innerHTML = `
-      <h2>🤖 AI-এর উত্তর</h2>
+    const ans=buildAIAnswer(q,bid);
+    box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
       <div class="ai-answer">
-        <div style="margin-bottom:10px;">
-          <span class="ai-badge">AI</span>
-          <span style="font-size:13px;color:#92400e;">${icon} ${name} থেকে তৈরি</span>
-          <span style="float:right;">${audioBtn}</span>
-        </div>
-        <div style="white-space:pre-wrap;line-height:1.9;">${escapeHtml(ans.text)}</div>
-        ${ans.sources.length?`<div style="margin-top:14px;padding-top:10px;border-top:1px dashed #f59e0b;font-size:13px;color:#92400e;">
-          <strong>📚 তথ্যসূত্র:</strong>
-          <ul style="margin:6px 0 0 20px;padding:0;">${ans.sources.map(src=>`<li>${escapeHtml(src)}</li>`).join("")}</ul>
-        </div>`:""}
+        <div style="margin-bottom:10px"><span class="ai-badge">লাইভ AI</span>
+        <span style="font-size:13px;color:#92400e">বিষয়: ${ans.subjectIcon} ${ans.subjectName} থেকে</span>
+        <span style="float:right">${playButton(ans.text)}</span></div>
+        <div style="white-space:pre-wrap;line-height:1.9">${esc(ans.text)}</div>
+        ${ans.sources.length?`<ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ans.sources.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
       </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn" onclick="speak(this.dataset.t)" data-t="">🔊 মহিলা কন্ঠে শুনুন</button>
-        <button class="btn secondary" onclick="stopSpeaking()">থামান</button>
-      </div>`;
-    // অটো-স্পিচ নেই — ব্যবহারকারী বাটনে ক্লিক করলেই শুনতে পাবে
-    document.querySelector('#result [data-t]').dataset.t = ans.text;
-  }, 600);
+      <div class="ai-controls"><button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans.text)}">🔊 মহিলা কন্ঠে শুনুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
+  },700);
 }
 
-function tokenize(text){
-  return text.toLowerCase().replace(/[।,.!?\(\)0-9০-৯—\-\n\r\t]/g," ").split(/\s+/).filter(w=>w.length>1);
-}
-
-function generateAIAnswer(q, bookId){
-  const qTokens = tokenize(q);
-  const candidates = [];
-  const booksToSearch = bookId==="all" ? SUBJECTS.filter(s=>s.loaded).map(s=>s.id) : [bookId];
-
-  booksToSearch.forEach(sid=>{
-    const book = getBookContent(sid);
-    const s = SUBJECTS.find(x=>x.id===sid);
+/* ============ AI engine — synthesizes natural teacher-style answer from book ============ */
+function tok(t){return t.toLowerCase().replace(/[।,.!?\(\)0-9০-৯—\-\n\r\t":;]/g," ").split(/\s+/).filter(w=>w.length>1)}
+function buildAIAnswer(q,bid){
+  const qT=tok(q);
+  const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
+  const all=[];
+  books.forEach(sid=>{
+    const b=getBookContent(sid);const s=SUBJECTS.find(x=>x.id===sid);
     // Solutions
-    (book.solutions||[]).forEach((sol,i)=>{
-      const text = sol.q + " " + sol.a;
-      const score = scoreText(qTokens, tokenize(text));
-      candidates.push({score: score+3, source:`${s.icon} ${s.name} (সমাধান)`, title:sol.q, text:sol.a, book:sid});
-    });
-    // Chapters — sentences
-    book.chapters.forEach((ch,ci)=>{
-      const sents = ch.body.split(/(?<=[।!?])\s+/);
-      sents.forEach((sent,si)=>{
-        // Add context: previous + next sentence
-        const ctx = sents.slice(Math.max(0,si-1), Math.min(sents.length, si+2)).join(" ");
-        const score = scoreText(qTokens, tokenize(sent+" "+ctx));
-        if(score>0){
-          candidates.push({score, source:`${s.icon} ${s.name} — ${ch.title}`, title:ch.title, text:sent.trim(), ctx:ctx, book:sid});
-        }
+    (b.solutions||[]).forEach(sol=>{all.push({score:score(qT,tok(sol.q+" "+sol.a))+4,src:`${s.icon} ${s.name} — সমাধান`,text:sol.a,q:sol.q,sid})});
+    // Chapter sentences
+    b.chapters.forEach(ch=>{
+      const sents=ch.body.split(/(?<=[।!?])\s+/);
+      sents.forEach((sen,i)=>{
+        const ctx=sents.slice(Math.max(0,i-1),Math.min(sents.length,i+2)).join(" ");
+        const sc=score(qT,tok(sen+" "+ctx+" "+ch.title));
+        if(sc>0)all.push({score:sc,src:`${s.icon} ${s.name} — ${ch.title}`,text:sen.trim(),ctx,sid,title:ch.title});
       });
-      // Whole chapter
-      const wholeScore = scoreText(qTokens, tokenize(ch.title+" "+ch.body));
-      if(wholeScore>10){
-        candidates.push({score:wholeScore*0.7, source:`${s.icon} ${s.name} — ${ch.title} (অধ্যায়)`, title:ch.title, text:`${ch.title} সম্পর্কে বিস্তারিত: ${ch.body.slice(0,600)}...`, book:sid});
-      }
+      // Whole chapter relevance
+      const wsc=score(qT,tok(ch.body));if(wsc>10)all.push({score:wsc*0.6,src:`${s.icon} ${s.name} — ${ch.title}`,text:`${ch.title} সম্পর্কে: ${ch.body.slice(0,500).replace(/\s+/g,' ').trim()}`,sid});
     });
   });
-
-  candidates.sort((a,b)=>b.score-a.score);
-  const top = candidates.slice(0,4);
-
-  if(top.length===0 || top[0].score<1){
-    return {text:`দুঃখিত, আপনার প্রশ্নের সাথে মিলে যাওয়া তথ্য বইগুলোতে পাওয়া যায়নি।\n\n💡 অন্যভাবে প্রশ্নটা লিখে চেষ্টা করুন — সম্ভবত প্রশ্নটির ভিন্ন শব্দ ব্যবহার করলে উত্তর পাওয়া যাবে।\n\nউদাহরণ:\n• "পিঁপড়া কী করছিল?"\n• "২১শে ফেব্রুয়ারি কী"\n• "রবীন্দ্রনাথের বিজ্ঞান শিক্ষকের নাম"`, sources:[]};
+  all.sort((a,b)=>b.score-a.score);const top=all.slice(0,5);
+  if(!top.length||top[0].score<1){
+    return{text:`দুঃখিত, আপনার প্রশ্নের সাথে মিলে যাওয়া তথ্য বর্তমান বইগুলোতে পাওয়া যায়নি।\n\n💡 অন্যভাবে প্রশ্ন লিখে বা ভিন্ন শব্দ ব্যবহার করে চেষ্টা করুন। প্রশ্নটি আরও স্পষ্ট করুন।`,sources:[],subjectIcon:"📚",subjectName:""};
   }
 
-  // AI-স্টাইলে উত্তর সাজানো
-  let intro = "";
-  if(matchesAny(qTokens, ["কে","কার","কে?"])) intro = "আপনার প্রশ্নের উত্তর: ";
-  else if(matchesAny(qTokens, ["কী","কি","কোন"])) intro = "জানা যায় যে, ";
-  else if(matchesAny(qTokens, ["কেন","কেন?"])) intro = "কারণ হলো: ";
-  else if(matchesAny(qTokens, ["কখন","কবে","সাল","তারিখ"])) intro = "সময়টি হলো: ";
-  else if(matchesAny(qTokens, ["কোথায়","কোথা"])) intro = "অবস্থানটি হলো: ";
-  else intro = "";
+  // Build natural answer
+  let intro;
+  if(has(qT,["কে","কার","কে?","?কে"])) intro="আপনার প্রশ্নের উত্তর হলো:";
+  else if(has(qT,["কী","কি","কোন","কি?"])) intro="বই থেকে জানা যায়,";
+  else if(has(qT,["কেন","কেন?"])) intro="এর কারণ হলো:";
+  else if(has(qT,["কখন","কবে","সাল","তারিখ","সালের"])) intro="সময়টি হলো:";
+  else if(has(qT,["কোথায়","কোথা"])) intro="অবস্থানটি হলো:";
+  else if(has(qT,["কেমন","কিভাবে","কীভাবে","কিভাবে?"])) intro="পদ্ধতি/বিবরণ:";
+  else if(has(qT,["শিক্ষা","নৈতিক","সারাংশ","মোরাল"])) intro="গল্প/পাঠের মূল শিক্ষা এটাই:";
+  else intro="";
 
-  // Combine best answers
-  let main = "";
-  const seen = new Set();
-  const sources = [];
-  top.forEach((t,i)=>{
-    const clean = t.text.replace(/\s+/g," ").trim();
-    if(clean.length<10) return;
-    if(seen.has(clean.slice(0,40))) return;
-    seen.add(clean.slice(0,40));
-    if(i===0) main += (intro?intro:"") + clean;
-    else main += " " + clean;
-    if(t.source && !sources.includes(t.source)) sources.push(t.source);
-    if(main.length>700) return;
+  // Collect best answer parts into one coherent answer
+  let text=(intro?intro+" ":"");
+  const seen=new Set();const sources=[];let curLen=0;
+  top.forEach(t=>{
+    let clean=t.text.replace(/\s+/g," ").trim();
+    if(!/[।!?]$/.test(clean))clean+="।";
+    if(clean.length<15)return;
+    if(seen.has(clean.slice(0,35)))return;
+    seen.add(clean.slice(0,35));
+    if(curLen+clean.length>900)return;
+    if(curLen>0&&!/[।!?]$/.test(text.slice(-1)))text+=" ";
+    text+=clean;curLen+=clean.length;
+    if(t.src&&!sources.includes(t.src))sources.push(t.src);
   });
 
-  if(!/[।!?]$/.test(main.trim())) main += "।";
-
-  return {text:main.trim(), sources:sources.slice(0,3)};
+  const leadSubject=top[0];
+  return{text: text.trim(),sources:sources.slice(0,4),subjectIcon:SUBJECTS.find(s=>s.id===leadSubject.sid).icon,subjectName:SUBJECTS.find(s=>s.id===leadSubject.sid).name};
 }
-
-function scoreText(qTokens, textTokens){
-  if(qTokens.length===0) return 0;
-  let s=0; let matched=0;
-  const tokenSet = new Set(textTokens);
-  qTokens.forEach(w=>{
-    if(tokenSet.has(w)){ s+=w.length*2; matched++; }
-    else {
-      // partial match
-      for(const wt of tokenSet){
-        if(wt.length>3 && (wt.includes(w)||w.includes(wt))){ s+=w.length*0.5; break;}
-      }
-    }
-  });
-  // Bonus if many query words matched
-  if(matched===qTokens.length) s += 5;
-  if(matched>=Math.ceil(qTokens.length*0.7)) s+=2;
+function score(qT,tT){
+  if(!qT.length)return 0;
+  const set=new Set(tT);let s=0,mt=0;
+  qT.forEach(w=>{if(set.has(w)){s+=w.length*2;mt++}else for(const wt of set){if(wt.length>3&&(wt.includes(w)||w.includes(wt))){s+=w.length*.6;break}}});
+  if(mt===qT.length)s+=6;else if(mt>=Math.ceil(qT.length*.7))s+=2;
   return s;
 }
-function matchesAny(tokens, arr){ return tokens.some(t=>arr.some(a=>t.includes(a)||a.includes(t))); }
+function has(arr,words){return arr.some(t=>words.some(w=>t.includes(w)||w.includes(t)))}
 
-/* =============== ভয়েস রিকগনিশন =============== */
+/* ============ Mic ============ */
 function toggleMic(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){alert("😕 আপনার ব্রাউজার ভয়েস ইনপুট সমর্থন করে না। Chrome ব্যবহার করুন।");return;}
-  if(isListening){recognition.stop();return;}
-  recognition = new SR();
-  recognition.lang="bn-BD";
-  recognition.interimResults=false;
-  recognition.onstart=()=>{isListening=true;document.getElementById("micIcon").innerHTML='<span class="voice-indicator"></span>';document.getElementById("micText").innerText="শুনছে...";};
-  recognition.onresult=e=>{document.getElementById("qInput").value=e.results[0][0].transcript;};
-  recognition.onerror=e=>{alert("ভয়েস শনাক্তকরণে সমস্যা: "+e.error);};
-  recognition.onend=()=>{isListening=false;document.getElementById("micIcon").innerText="🎤";document.getElementById("micText").innerText="ভয়েস দিন";};
-  recognition.start();
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("আপনার ব্রাউজার ভয়েস ইনপুট সমর্থন করে না।");return}
+  if(listening){recog.stop();return}
+  recog=new SR();recog.lang="bn-BD";recog.interimResults=false;
+  recog.onstart=()=>{listening=true;document.getElementById("micIcon").innerHTML='<span class="voice-ind"></span>';document.getElementById("micText").innerText="শুনছে..."};
+  recog.onresult=e=>{document.getElementById("qInput").value=e.results[0][0].transcript};
+  recog.onerror=e=>{alert("ভয়েস শনাক্তকরণ সমস্যা: "+e.error)};
+  recog.onend=()=>{listening=false;document.getElementById("micIcon").innerText="🎤";document.getElementById("micText").innerText="ভয়েস দিন"};
+  recog.start();
 }
 
-/* =============== ইউটিলিটি =============== */
-function toggleChapter(id){document.getElementById(id).classList.toggle("open");}
-function doBookmark(id,text,btn){toggleBookmark(id,text);btn.classList.toggle("active");}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+/* ============ Utils ============ */
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function attr(s){return esc(String(s)).replace(/"/g,"&quot;")}
 </script>
 </body>
 </html>
