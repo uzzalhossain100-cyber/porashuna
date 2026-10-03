@@ -433,8 +433,24 @@ async function runAI(){
     const subj=ctx.subjectName?ctx.subjectIcon+" "+ctx.subjectName:"বই";
     const smart=smartDirectAnswer(q,bid);
     let liveText="";let liveErr=false;
-    try{const la=await callLiveAI(q,ctx.context);if(la&&la.text)liveText=la.text.trim();}catch(e){liveErr=true;}
-    const finalText=(liveText&&liveText.length>15&&!/(পাওয়া যায়নি|স্পষ্ট উত্তর)/.test(liveText))?liveText:(smart?smart.text:ctx.fallback);
+    // If we found a strong direct solution match (score>=10), trust the book completely, skip AI
+    const strongSol=ctx.topSolution&&ctx.topSolution.score>=10;
+    if(!strongSol){
+      try{const la=await callLiveAI(q,ctx.context);if(la&&la.text)liveText=la.text.trim();}catch(e){liveErr=true;}
+    }
+    // Choose final answer: strong book solution → smart answer always; otherwise prefer smart if live is empty/failed, else verify live against context
+    let finalText;
+    if(strongSol&&smart){finalText=smart.text;}
+    else if(liveText&&liveText.length>15){
+      // Strict sanity: live answer must have at least 50% of content words present in context (anti-hallucination)
+      const liveTok=tok(liveText);const ctxTok=tok(ctx.context);
+      const ctxSet=new Set(ctxTok.filter(w=>w.length>1));
+      let content=0,hit=0;
+      const stop=new Set(["আমি","তুমি","সে","তারা","আমরা","এবং","ও","আর","বা","কিন্তু","এই","ওই","সেই","এর","কে","কি","কী","করে","হয়","আছে","পড়ে","বলে","থাকে","যায়","দেয়","না","তা","যে","তিনি","সাথে","সঙ্গে","জন্য","থেকে","দিয়ে","মধ্যে","কাছে","দিকে","রকম","তার","একটি","একটা","কিছু","অনেক","সব","এক","দুই","তিন","হয়েছে","বলেছে","করেন","ছিল","তাকে"]);
+      liveTok.forEach(w=>{if(stop.has(w)||w.length<2)return;content++;if(ctxSet.has(w))hit++});
+      if(content>=3&&hit/content>=0.5)finalText=liveText;
+      else finalText=smart?smart.text:ctx.fallback;
+    }else{finalText=smart?smart.text:ctx.fallback;}
     box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
       <div class="direct-answer">
         <div class="label">✓ উত্তর</div>
@@ -469,64 +485,86 @@ async function runAI(){
 function toggleDetail(){const b=document.getElementById("detailBox");const btn=document.getElementById("detailBtn");if(!b)return;const open=b.style.display!=="none";b.style.display=open?"none":"block";if(btn)btn.textContent=open?"📖 বিস্তারিত দেখুন":"📖 বিস্তারিত লুকান";}
 
 async function callLiveAI(q,context){
-  const sys="আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক। প্রদত্ত প্রসঙ্গ ব্যবহার করে বাংলায় সংক্ষেপে পূর্ণ বাক্যে উত্তর দিন (২-৩ বাক্যের মধ্যে)। একক শব্দে উত্তর দেবেন না। একাধিক প্রশ্ন থাকলে কমা দিয়ে যুক্ত করে এক বাক্যে দিন। প্রসঙ্গের বাইরের কিছু যোগ করবেন না।";
-  const user=`প্রসঙ্গ (বই থেকে):
-${context.slice(0,4500)}
-
-প্রশ্ন: ${q}
-
-উত্তর:`;
-  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),15000);
-  const r=await fetch("https://text.pollinations.ai/openai",{
-    method:"POST",signal:ctrl.signal,
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({model:"openai",messages:[{role:"system",content:sys},{role:"user",content:user}],temperature:0.3,max_tokens:500})
-  });
-  if(!r.ok)throw new Error("API error "+r.status);
-  const j=await r.json();
-  const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||"").trim();
-  return t?{"text":t}:null;
+  const sys="আপনি একজন বাংলা প্রাথমিক শিক্ষক। কঠোর নিয়ম: শুধুমাত্র নিচের প্রসঙ্গে যা লেখা আছে তার ভিত্তিতে উত্তর দিন। প্রসঙ্গের বাইরের কোনো নাম (যেমন রবীন্দ্রনাথ, কাজী নজরুল ইসলাম ইত্যাদি যদি প্রসঙ্গে না থাকে), তারিখ বা তথ্য একদম যোগ করবেন না। প্রসঙ্গে উত্তর না পেলে শুধু লিখুন: '[প্রসঙ্গে উত্তর নেই]'। সারাংশ লিখতে বললে প্রসঙ্গের কাহিনী/বিষয়বস্তু থেকে সংক্ষেপে লিখুন। একেবারে সংক্ষিপ্ত ও নির্ভুল উত্তর দিন।";
+  const user="প্রসঙ্গ (বই থেকে):\n"+context.slice(0,5500)+"\n\nপ্রশ্ন: "+q+"\n\nশুধু প্রসঙ্গের তথ্য দিয়ে উত্তর (বাইরের তথ্য যোগ করবেন না):";
+  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),20000);
+  try{
+    const r=await fetch("https://text.pollinations.ai/openai",{
+      method:"POST",signal:ctrl.signal,
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"openai",messages:[{role:"system",content:sys},{role:"user",content:user}],temperature:0,max_tokens:400})
+    });
+    if(!r.ok)return null;
+    const j=await r.json();
+    let t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||"").trim();
+    if(/\[প্রসঙ্গে উত্তর নেই\]|প্রদত্ত বইয়ে|পাওয়া যায়নি/.test(t))return null;
+    t=filterAgainstContext(t,context);
+    if(!t||t.length<5)return null;
+    return{"text":t};
+  }catch(e){return null;}
 }
+function filterAgainstContext(ans,ctx){
+  const ctxWords=new Set(tok(ctx));
+  const sents=ans.split(/(?<=[।!?])\s+/);
+  const stop=new Set(["আমি","তুমি","সে","তারা","আমরা","এবং","ও","আর","বা","কিন্তু","এই","ওই","সেই","এর","কে","কি","কী","করে","হয়","আছে","পড়ে","বলে","থাকে","যায়","দেয়","না","তা","যে","তিনি","সাথে","সঙ্গে","জন্য","থেকে","দিয়ে","মধ্যে","কাছে","দিকে","রকম","তার","একটি","একটা","কিছু","অনেক","সব","এক","দুই","তিন","হয়েছে","বলেছে","করেন","ছিল","তাকে","এখানে","সেখানে","তাকে","যারা","যাঁরা","যখন","তখন"]);
+  const good=sents.filter(sen=>{
+    const wl=tok(sen);
+    if(wl.length===0)return false;
+    let content=0,hit=0;
+    wl.forEach(w=>{if(w.length<2||stop.has(w))return;content++;if(ctxWords.has(w))hit++});
+    if(content===0)return true;
+    return hit/content>=0.4;
+  });
+  return good.join(" ").trim();
+}
+
 
 /* ============ Smart direct answer (who/what/where/when) + RAG context collector ============ */
 function collectContext(q,bid){
   const qT=tok(q);
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
-  const all=[];let bestSubj=null,bestScore=-1;
+  const all=[];let bestSubj=null,bestScore=-1;let solMatches=[];
   for(const sid of books){
     const b=getBookContent(sid);const s=SUBJECTS.find(x=>x.id===sid);
+    // Solutions first (highest weight - these are direct Q&A from book)
     for(const sol of (b.solutions||[])){
       const solBody=sol.q.split(':').pop();
       const sc=score(qT,tok(solBody));
-      all.push({score:sc+5,text:"প্রশ্ন: "+solBody+"\nসঠিক উত্তর: "+sol.a,src:s.icon+" "+s.name+" — সমাধান",sid});
+      all.push({score:sc+8,text:"প্রশ্ন: "+solBody+"\nসঠিক উত্তর: "+sol.a,src:s.icon+" "+s.name+" — সমাধান",sid,isSol:true});
       if(sc>bestScore){bestScore=sc;bestSubj=s}
+      if(sc>5)solMatches.push({q:solBody,a:sol.a,sc});
     }
     for(const ch of b.chapters){
       const sents=ch.body.split(/(?<=[।!?])\s+/);
       let chapMax=0;
       for(let i=0;i<sents.length;i++){
         const sen=sents[i];
-        const prev=i>0?sents[i-1]:"";
-        const next=i<sents.length-1?sents[i+1]:"";
-        const next2=i<sents.length-2?sents[i+2]:"";
-        const window=(prev+" "+sen+" "+next+" "+next2).trim();
+        // Wider window: 2 before + 2 after
+        const prev=i>0?sents[i-1]:"";const prev2=i>1?sents[i-2]:"";
+        const next=i<sents.length-1?sents[i+1]:"";const next2=i<sents.length-2?sents[i+2]:"";
+        const window=(prev2+" "+prev+" "+sen+" "+next+" "+next2).trim();
         const sc=score(qT,tok(sen+" "+window+" "+ch.title));
         if(sc>chapMax)chapMax=sc;
-        if(sc>2){
-          all.push({score:sc,text:"[পাঠ: "+ch.title+"] "+window,src:s.icon+" "+s.name+" — "+ch.title,sid});
+        if(sc>3){
+          all.push({score:sc,text:"[পাঠ: "+ch.title+"]\n"+window,src:s.icon+" "+s.name+" — "+ch.title,sid});
           if(sc>bestScore){bestScore=sc;bestSubj=s}
         }
       }
-      if(chapMax>=qT.length*2){
-        all.push({score:chapMax*0.7,text:"["+ch.title+" — অধ্যায়ের অংশ]\n"+ch.body.slice(0,1800),src:s.icon+" "+s.name+" — "+ch.title,sid});
+      // Include larger chunk for highly relevant chapters
+      if(chapMax>=Math.max(8,qT.length*2)){
+        // Find best position and extract 800 chars around it
+        all.push({score:chapMax*0.8,text:"["+ch.title+"]\n"+ch.body.slice(0,2500),src:s.icon+" "+s.name+" — "+ch.title,sid});
       }
     }
   }
   all.sort((a,b)=>b.score-a.score);
   const ctxs=[];const sources=[];const seen=new Set();let totalLen=0;
-  for(const t of all.slice(0,12)){
-    const k=t.text.slice(0,60);if(seen.has(k))continue;seen.add(k);
-    if(totalLen+t.text.length>4500)break;
+  // Always include top solution first, if any
+  const topSol=all.find(x=>x.isSol);
+  // Take top entries, max ~5500 chars
+  for(const t of all.slice(0,15)){
+    const k=t.text.slice(0,80);if(seen.has(k))continue;seen.add(k);
+    if(totalLen+t.text.length>5500)break;
     ctxs.push(t.text);totalLen+=t.text.length;
     if(sources.indexOf(t.src)<0)sources.push(t.src);
   }
@@ -535,6 +573,7 @@ function collectContext(q,bid){
     sources,
     subjectIcon:bestSubj?bestSubj.icon:"📚",
     subjectName:bestSubj?bestSubj.name:"",
+    topSolution:topSol?{score:topSol.score-20,q:topSol.text.replace(/^প্রশ্ন:\s*/,"").split("\n")[0],a:topSol.a}:null,
     fallback:"দুঃখিত, এই প্রশ্নের উত্তর বইয়ে পাওয়া যায়নি।"
   };
 }
@@ -542,6 +581,36 @@ function collectContext(q,bid){
 function smartDirectAnswer(q,bid){
   const ql=q.trim();
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
+  // Early: summary/summary questions go directly to chapter summary extraction (skip QA matching to avoid confusing poet names across lessons)
+  if(/সারাংশ|সারমর্ম|সংক্ষেপে|সংক্ষিপ্ত|সারকথা|মূলভাব|মূল কথা|মূল বক্তব্য|কাহিনী\s*(?:বল|লিখ|দাও)|সারাংশ\s*(?:বল|লিখ|দাও)/.test(ql)){
+    let bestCh=null,bestChSc=0;
+    for(const sid of books){
+      const b=getBookContent(sid);
+      for(const ch of b.chapters){
+                  // Title match has very high weight — so "আমি হব" query correctly matches পাঠ ৮
+          const titleTok=tok(ch.title);const bodyTok=tok(ch.body.slice(0,1500));
+          const sc_title=score(tok(ql),titleTok);
+          const sc_body=score(tok(ql),bodyTok);
+          // Strong title bonus + body
+          const sc=sc_title*3+sc_body;
+        if(sc>bestChSc){bestChSc=sc;bestCh=ch;}
+      }
+    }
+    if(bestCh&&bestChSc>=3){
+      let body=bestCh.body;
+      const cutAt=body.search(/শব্দ শিখি|অনুশীলনী|নোট:/);
+      if(cutAt>50)body=body.slice(0,cutAt);
+      const lines=body.split("\n").filter(l=>l.trim());
+      let picked=[];let len=0;
+      for(const ln of lines){
+        if(len+ln.length>650)break;
+        picked.push(ln.trim());len+=ln.length;
+      }
+      const text=picked.join(" ");
+      if(text.length>80)return{text:(bestCh.title+" পাঠের সারাংশ: "+text.replace(/\s+/g," ").trim()+"।")};
+    }
+  }
+
   let bestMatch=null,bestSc=0,bestSid=null,bestType=null;
   for(const sid of books){
     const sols=getSolutions(sid);const b=getBookContent(sid);
@@ -562,10 +631,13 @@ function smartDirectAnswer(q,bid){
   if(!bestMatch||bestSc<3)return null;
   let rawA=(bestMatch.a||"").replace(/\s+/g," ").trim();
   if(!/[।!?]$/.test(rawA))rawA+="।";
-  if(bestType==="chapter"&&rawA.length>25)return{text:rawA};
+  // Chapter sentence: only trust as direct answer if the score is very strong (>=15), otherwise pass through for AI expansion
+  if(bestType==="chapter"&&rawA.length>25&&bestSc>=15)return{text:rawA};
+
 
   let qbody=(bestMatch.qBody||ql).trim().replace(/[‘’]/g,"'").replace(/\s+/g," ");
   qbody=qbody.replace(/^পাঠ\s*[0-9০-৯]+\s*[—\-–:]\s*(অনুশীলনী\s*[0-9০-৯]+[()（）কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহ়]?[—\-–:]\s*)?/,"").trim();
+
 
   const qParts=splitQuestions(qbody);
   const aParts=splitAnswers(rawA);
@@ -590,6 +662,7 @@ function smartDirectAnswer(q,bid){
       }
     }
   }
+  if(bestType==="chapter"&&bestSc<12)return null; // not confident enough, let AI handle
   const one=buildFullSentence(qbody,rawA);
   if(one)return{text:ensureFullStop(one)};
   return{text:ensureFullStop(rawA)};
@@ -735,21 +808,36 @@ function buildAIAnswer(q,bid){
 }
 function score(qT,tT){
   if(!qT.length)return 0;
-  const set=new Set(tT);let s=0,mt=0,important=0,importantHit=0;
-  const stop=new Set(["পাঠ","অনুশীলনী","কি","কী","কে","কাকে","কার","কেন","কখন","কবে","কোথায়","কেমন","কিভাবে","এই","ওই","সেই","টা","টি","গুলো","রা","এবং","আর","বা","কিন্তু","থেকে","দিয়ে","করে","হয়","বলে","আছে","না","কি","যে","তা","এটা","সেটা"]);
-  qT.forEach(w=>{
+  const set=new Set(tT);const tStr=" "+tT.join(" ")+" ";
+  let s=0;let imp=0;let impHit=0;let phraseBonus=0;
+  const stop=new Set(["পাঠ","অনুশীলনী","আমি","আমরা","কি","কী","কে","কাকে","কার","কারা","কেন","কখন","কবে","কোথায়","কেমন","কিভাবে","এই","ওই","সেই","টা","টি","গুলো","রা","এবং","আর","বা","কিন্তু","থেকে","দিয়ে","করে","হয়","বলে","আছে","না","যে","তা","এটা","সেটা","ও"]);
+  // Query words in order for phrase matching
+  const impWords=[];
+  qT.forEach((w,idx)=>{
     if(stop.has(w))return;
-    important++;
-    if(set.has(w)){s+=w.length*3;mt++;importantHit++}
+    imp++;impWords.push({w,idx});
+    if(set.has(w)){s+=w.length*5;impHit++}
     else{
       for(const wt of set){
-        if(w.length>=2&&wt.length>=2&&(wt.includes(w)||w.includes(wt))){s+=Math.min(w.length,wt.length)*1.2;mt++;break}
+        if(w.length>=2&&wt.length>=2){
+          if(wt===w){s+=w.length*5;impHit++;break}
+          if(w.length>=3&&wt.includes(w)){s+=w.length*2;impHit++;break}
+        }
       }
     }
   });
-  if(importantHit===important&&important>0)s+=10;
-  else if(importantHit>=Math.ceil(important*.8))s+=4;
-  else if(importantHit>=Math.ceil(important*.5))s+=1;
+  // Phrase bonus: bigrams and trigrams from the query (only important words)
+  for(let i=0;i<impWords.length-1;i++){
+    const bg=impWords[i].w+" "+impWords[i+1].w;
+    if(tStr.includes(" "+bg+" "))phraseBonus+=15;
+  }
+  for(let i=0;i<impWords.length-2;i++){
+    const tg=impWords[i].w+" "+impWords[i+1].w+" "+impWords[i+2].w;
+    if(tStr.includes(" "+tg+" "))phraseBonus+=25;
+  }
+  if(impHit===imp&&imp>0)s+=20+phraseBonus;
+  else if(impHit>=Math.ceil(imp*.8))s+=8+phraseBonus;
+  else if(impHit>=Math.ceil(imp*.6))s+=3+phraseBonus;
   return s;
 }
 function has(arr,words){return arr.some(t=>words.some(w=>t.includes(w)||w.includes(t)))}
