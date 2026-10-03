@@ -429,50 +429,49 @@ async function runAI(){
   box.innerHTML=`<h2>🤖 AI উত্তর</h2>
     <div class="ai-answer"><span class="ai-badge">লাইভ AI</span> উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
   try{
-    // ধাপ ১: বই থেকে প্রাসঙ্গিক তথ্য সংগ্রহ (RAG context)
     const ctx=collectContext(q,bid);
-    const subj=ctx.subjectName?`${ctx.subjectIcon} ${ctx.subjectName}`:"বই";
-    // ধাপ ২: প্রথমে দ্রুত স্মার্ট-সরাসরি উত্তর (local match দিয়ে)
-    const quick=smartDirectAnswer(q,bid);
-    // ধাপ ৩: লাইভ AI API কল (Pollinations - free, no key, CORS enabled)
-    const liveAns=await callLiveAI(q,ctx.context);
-    const finalText=(liveAns&&liveAns.text)?liveAns.text:(quick?quick.text:ctx.fallback);
+    const subj=ctx.subjectName?ctx.subjectIcon+" "+ctx.subjectName:"বই";
+    const smart=smartDirectAnswer(q,bid);
+    let liveText="";let liveErr=false;
+    try{const la=await callLiveAI(q,ctx.context);if(la&&la.text)liveText=la.text.trim();}catch(e){liveErr=true;}
+    const finalText=(liveText&&liveText.length>15&&!/(পাওয়া যায়নি|স্পষ্ট উত্তর)/.test(liveText))?liveText:(smart?smart.text:ctx.fallback);
     box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
-      ${quick?`<div class="direct-answer">
-        <div class="label">✓ স্মার্ট উত্তর</div>
-        <div class="d-text">${esc(quick.text)}</div>
-      </div>`:""}
-      <div class="ai-answer">
-        <div style="margin-bottom:10px"><span class="ai-badge">লাইভ AI</span>
-        <span style="font-size:13px;color:#92400e">বিষয়: ${esc(subj)} থেকে</span>
-        <span style="float:right">${playButton(finalText)}</span></div>
-        <div style="white-space:pre-wrap;line-height:1.9">${esc(finalText)}</div>
-        ${ctx.sources.length?`<ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ctx.sources.slice(0,4).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
+      <div class="direct-answer">
+        <div class="label">✓ উত্তর</div>
+        <div class="d-text">${esc(finalText)}</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${playButton(finalText)}
+          <button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(finalText)}">🔊 শুনুন</button>
+          <button class="btn secondary" id="detailBtn" onclick="toggleDetail()">📖 বিস্তারিত দেখুন</button>
+        </div>
       </div>
-      <div class="ai-note">💡 উত্তরটি লাইভ AI দ্বারা আপনার বইয়ের তথ্য ব্যবহার করে তৈরি করা হয়েছে।</div>
-      <div class="ai-controls">
-        <button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(finalText)}">🔊 শুনুন</button>
+      <div id="detailBox" style="display:none">
+        ${(smart&&smart.text!==finalText)?`<div class="ai-answer" style="margin-top:12px">
+          <div style="margin-bottom:8px"><span class="ai-badge">স্মার্ট</span> বই থেকে প্রাপ্ত উত্তর</div>
+          <div style="line-height:1.9">${esc(smart.text)}</div>
+        </div>`:""}
+        ${ctx.sources.length?`<div style="margin-top:10px"><ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ctx.sources.slice(0,4).map(s=>`<li>${esc(s)}</li>`).join("")}</ul></div>`:""}
+        ${liveErr?`<div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-top:10px">⚠️ লাইভ AI সংযোগ ব্যর্থ হয়েছিল, বই থেকে উত্তর দেখানো হচ্ছে।</div>`:""}
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn secondary" onclick="runAI()">🔄 নতুন করে তৈরি করুন</button>
         <button class="btn secondary" onclick="stopSpeaking()">থামান</button>
       </div>`;
   }catch(err){
-    // API fail হলে local fallback
     const ans=buildAIAnswer(q,bid);
     box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
-      <div class="ai-answer">
-        <div style="margin-bottom:10px"><span class="ai-badge">লাইভ AI</span>
-        <span style="float:right">${playButton(ans.text)}</span></div>
-        <div style="white-space:pre-wrap;line-height:1.9">${esc(ans.text)}</div>
-        ${ans.sources.length?`<ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ans.sources.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
+      <div class="direct-answer"><div class="label">✓ উত্তর</div><div class="d-text">${esc(ans.text)}</div>
+        <div style="margin-top:12px;display:flex;gap:8px">${playButton(ans.text)}<button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans.text)}">🔊 শুনুন</button></div>
       </div>
-      <div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e">⚠️ লাইভ AI সংযোগ ব্যর্থ হয়েছে, বই থেকে উত্তর দেখানো হচ্ছে।</div>
-      <div class="ai-controls"><button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans.text)}">🔊 শুনুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
+      <div style="margin-top:10px;display:flex;gap:8px"><button class="btn secondary" onclick="runAI()">🔄 নতুন করে তৈরি করুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
   }
 }
+function toggleDetail(){const b=document.getElementById("detailBox");const btn=document.getElementById("detailBtn");if(!b)return;const open=b.style.display!=="none";b.style.display=open?"none":"block";if(btn)btn.textContent=open?"📖 বিস্তারিত দেখুন":"📖 বিস্তারিত লুকান";}
+
 async function callLiveAI(q,context){
-  const sys="আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক। নিচে প্রদত্ত প্রসঙ্গ (বই থেকে নেওয়া) ব্যবহার করে বাংলায় খুব স্পষ্ট, সাধারণ, প্রাকৃতিক ভাষায় উত্তর দিন। উত্তরের প্রথম বাক্যে সরাসরি মূল উত্তর দিন (পূর্ণ বাক্যে), তারপর সংক্ষেপে ব্যাখ্যা করুন। প্রশ্ন 'কাকে/কে ... বলেছে?' হলে অবশ্যই পূর্ণ বাক্যে লিখুন: X Y-কে 'Z' বলেছে। একক শব্দে উত্তর দেবেন না। 'কী' প্রশ্নের উত্তর পূর্ণ বাক্যে দিন। প্রসঙ্গের বাইরের কিছু যোগ করবেন না। প্রসঙ্গে স্পষ্ট উত্তর না পেলে বলুন: 'প্রদত্ত বইয়ে এই প্রশ্নের স্পষ্ট উত্তর পাওয়া যায়নি।'";
+  const sys="আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক। প্রদত্ত প্রসঙ্গ ব্যবহার করে বাংলায় সংক্ষেপে পূর্ণ বাক্যে উত্তর দিন (২-৩ বাক্যের মধ্যে)। একক শব্দে উত্তর দেবেন না। একাধিক প্রশ্ন থাকলে কমা দিয়ে যুক্ত করে এক বাক্যে দিন। প্রসঙ্গের বাইরের কিছু যোগ করবেন না।";
   const user=`প্রসঙ্গ (বই থেকে):
-${context.slice(0,3000)}
+${context.slice(0,4500)}
 
 প্রশ্ন: ${q}
 
@@ -543,92 +542,142 @@ function collectContext(q,bid){
 function smartDirectAnswer(q,bid){
   const ql=q.trim();
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
-  const norm=ql.replace(/[‘’]/g,"'").replace(/[“”]/g,'"');
-  // Find best match across books (solutions first priority)
   let bestMatch=null,bestSc=0,bestSid=null,bestType=null;
   for(const sid of books){
     const sols=getSolutions(sid);const b=getBookContent(sid);
     for(const sol of sols){
       const solBody=sol.q.split(':').pop();
       const sc=score(tok(ql),tok(solBody));
-      if(sc>bestSc&&sc>=3){bestMatch=sol;bestSc=sc;bestSid=sid;bestType="solution";}
+      if(sc>bestSc&&sc>=3){bestMatch={...sol,qBody:solBody};bestSc=sc;bestSid=sid;bestType="solution";}
     }
-    if(bestSc>=20)break; // strong match
+    if(bestSc>=25)break;
     for(const ch of b.chapters){
       for(const sen of ch.body.split(/(?<=[।!?])\s+/)){
         const sc=score(tok(ql),tok(sen));
-        if(sc>bestSc){bestMatch={a:sen.trim(),chapter:ch.title,q:ql};bestSc=sc;bestSid=sid;bestType="chapter";}
+        if(sc>bestSc){bestMatch={a:sen.trim(),chapter:ch.title,q:ql,qBody:ql};bestSc=sc;bestSid=sid;bestType="chapter";}
       }
     }
-    if(bestSc>=20)break;
+    if(bestSc>=25)break;
   }
   if(!bestMatch||bestSc<3)return null;
-  let ans=(bestMatch.a||"").replace(/\s+/g," ").trim();
-  if(!/[।!?]$/.test(ans))ans+="।";
+  let rawA=(bestMatch.a||"").replace(/\s+/g," ").trim();
+  if(!/[।!?]$/.test(rawA))rawA+="।";
+  if(bestType==="chapter"&&rawA.length>25)return{text:rawA};
 
-  // ---------- Build full-sentence smart answer ----------
-  if(bestType==="solution"){
-    const qbody=(bestMatch.q.split(':').pop()||ql).trim().replace(/[‘’]/g,"'");
-    // Pattern: "X কাকে 'Y' বলেছে?" → "X তার/উত্তর-কে 'Y' বলেছে।"
-    let w=qbody.match(/^(.+?)\s+(কাকে|কে)\s+(?:['"]([^'"]+)['"]\s+)?(বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো|ডাকছে|বলেন|চিনতে)\s*\??$/);
-    if(w){
-      const subj=w[1].trim();const quoted=w[3]||"";const verb=w[4];
-      let obj=ans.replace(/[।!?]/g,"").trim();
-      if(obj.length<25){
-        let objStr=obj;
-        // Add -কে postposition if it's a person noun missing it (and verb expects object)
-        const needsKe = /^(বলেছে|বলে|বলল|বলতো|ডাকে|ডাকছে|বলেন|চিনতে)$/.test(verb);
-        if(needsKe && !objStr.endsWith("কে") && !objStr.endsWith("কে?") && !objStr.endsWith("দের") && objStr.length<15){
-          if(/(মা|বাবা|বোন|ভাই|দাদি|দাদা|নানা|নানি|খালা|ফুফু|চাচা|শিক্ষক|শিক্ষিকা|বন্ধু|বন্ধব|ছেলে|মেয়ে|ছাত্র|ছাত্রী|সাথী|খোকা|খুকি|বুড়ি|লোক|ছেলেটি|মেয়েটি|কন্যা|পুত্র)$/.test(objStr)){
-            objStr+="কে";
-          }
-        }
-        const quoteStr=quoted?` '${quoted}'`:"";
-        return {text:`${subj} ${objStr}${quoteStr} ${verb}।`};
+  let qbody=(bestMatch.qBody||ql).trim().replace(/[‘’]/g,"'").replace(/\s+/g," ");
+  qbody=qbody.replace(/^পাঠ\s*[0-9০-৯]+\s*[—\-–:]\s*(অনুশীলনী\s*[0-9০-৯]+[()（）কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহ়]?[—\-–:]\s*)?/,"").trim();
+
+  const qParts=splitQuestions(qbody);
+  const aParts=splitAnswers(rawA);
+
+  if(qParts.length>1){
+    if(aParts.length>=qParts.length){
+      const out=[];
+      for(let i=0;i<qParts.length;i++){
+        const sentence=buildFullSentence(qParts[i],aParts[i]);
+        if(sentence){let clean=sentence.replace(/[।!?]$/,"").trim();out.push(i===0?capitalize(clean):lowerFirst(clean));}
+      }
+      if(out.length>=qParts.length)return{text:out.join(", ")+"।"};
+    }
+    const words=rawA.replace(/[।!?]/g,"").trim().split(/\s+/);
+    if(words.length>=2&&/^[\u0980-\u09FF]+$/.test(words[0])&&qParts.length===2){
+      const n1=buildFullSentence(qParts[0],words[0]);
+      const rest=words.slice(1).join(" ");
+      const n2=buildFullSentence(qParts[1],rest);
+      if(n1&&n2){
+        const c1=n1.replace(/[।!?]$/,"").trim();const c2=n2.replace(/[।!?]$/,"").trim();
+        return{text:capitalize(c1)+", "+lowerFirst(c2)+"।"};
       }
     }
-    // Pattern: "কার X?" → "X-এর/উত্তরের X।"
-    w=qbody.match(/^কার\s+(.+?)\s*\??$/);
-    if(w){
-      const pred=w[1].trim();
-      const obj=ans.replace(/[।!?]/g,"").trim();
-      if(obj.length<30){
-        let subject=obj;
-        // If answer doesn't already end in -র/-এর/-য়ের, append -র/-এর
-        if(!/(র|ের|যের|দের|এর)$/.test(subject)&&!/(কে|যায়|হয়|করে)$/.test(subject)){
-          // Add -এর for consonant endings, -র for vowel endings
-          if(/[অআইঈউঊএঐওঔ]$/.test(subject))subject+="র";else subject+="ের";
-        }
-        return {text:`${subject} ${pred}।`};
-      }
-    }
-    // Pattern: "কখন/কবে ...?" → answer as-is if short
-    w=qbody.match(/^(কখন|কবে)\s+/);
-    if(w&&ans.length<40)return{text:ans};
-    // Pattern: "কোথায়/কোথা ...?"
-    w=qbody.match(/^(কোথায়|কোথা)\s+/);
-    if(w&&ans.length<40)return{text:ans};
-    // Pattern: "কেন ...?"
-    w=qbody.match(/^কেন\s+/);
-    if(w)return{text:ans};
-    // Pattern: "X কী/কি [verb]?" → "X [answer] [verb]।"
-    w=qbody.match(/^(.+?)\s+(কী|কি)\s*(হতে চায়|হবে|হয়|করে|করছে|করবে|খায়|পড়ে|লেখে|বলে|আছে|চায়|দেয়|বানায়|দেখে|শিখে|পারে)?\s*\??$/);
-    if(w&&ans.length<60){
-      const subj=w[1].trim();const vb=w[3]||"";
-      return {text:`${subj} ${ans.replace(/[।!?]/g,"").trim()}${vb?" "+vb:""}।`};
-    }
-    // Default: if answer is very short, try generic "X এর উত্তর: Y"
-    if(ans.length<30){
-      // Just return the answer as-is (may be a short phrase)
-      return{text:ans};
-    }
-    return {text:ans};
   }
-  // chapter sentence — use as-is
-  return {text:ans};
+  const one=buildFullSentence(qbody,rawA);
+  if(one)return{text:ensureFullStop(one)};
+  return{text:ensureFullStop(rawA)};
 }
+function splitQuestions(q){
+  const parts=[];let cur="";
+  for(let i=0;i<q.length;i++){cur+=q[i];if(q[i]==="?"){const t=cur.trim();if(t)parts.push(t);cur=""}}
+  if(cur.trim())parts.push(cur.trim());
+  return parts.filter(p=>p.length>3);
+}
+function splitAnswers(a){return a.split(/;|।|—/).map(s=>s.trim()).filter(s=>s.length>0);}
+function buildFullSentence(qPart,ansPart){
+  let ans=ansPart.replace(/[।!?]/g," ").trim();if(!ans)return "";
+  let q=qPart.trim().replace(/\s+/g," ");
+  q=q.replace(/^পাঠ\s*[0-9০-৯]+\s*[—\-–:]\s*(অনুশীলনী\s*[0-9০-৯]+[()（）কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহ়]?[—\-–:]\s*)?/,"").trim();
+  if(ans.includes(";")){
+    const m=q.match(/^(.+?)\s+(কাকে|কে|কী|কি|কার|কেন|কখন|কবে|কোথায়|কোথা|কেমন|কিভাবে|কীভাবে|কোন)/);
+    const subj=m?m[1].trim():"";
+    if(ans.startsWith(subj)||ans.length>20)return ans.replace(/;\s*/g,", ");
+  }
+  if(ans.length>50&&/(করে|করেন|হয়|আছে|পড়ে|বলে|বলেছে|দেয়|যায়|থাকে|হবে|করছে|চায়|লেখে|দেখে|শিখে|করবে|দেখাশোনা)/.test(ans))return ans;
+  const subjMatch=q.match(/^(.+?)\s+(কাকে|কে|কী|কি|কার|কেন|কখন|কবে|কোথায়|কোথা|কেমন|কিভাবে|কীভাবে|কোন)/);
+  const subj=subjMatch?subjMatch[1].trim():"";
+  const startsWithSubject=subj&&ans.startsWith(subj);
+  const looksFull=ans.length>12&&/(করে|করেন|হয়|আছে|পড়ে|বলে|বলেছে|দেয়|যায়|থাকে|হবে|করছে|চায়|লেখে|দেখে|শিখে|করবে|হতে চায়|জাগে|দেখাশোনা)/.test(ans);
+  if(startsWithSubject&&looksFull)return ans.replace(/\s+/g," ");
 
-/* ============ AI engine — synthesizes natural teacher-style answer from book ============ */
+  let m=q.match(/^(.+?)\s*(?:এর|-এর|র)?\s*নাম\s*(কী|কি)\s*\??$/);
+  if(m){
+    const s=m[1].trim();
+    if(ans.startsWith(s+"র নাম")||ans.startsWith(s+" এর নাম"))return ans;
+    if(ans.startsWith(s))return ans;
+    if(ans.length<25&&!/(করে|হয়|আছে|পড়ে|বলে|হবে|চায়|দেয়)/.test(ans)){
+      let base=s;base=base.replace(/ের$|এর$|যের$/,"");base=base.replace(/র$/,"");
+      if(ans===base)return ans;
+      return s+"র নাম "+ans;
+    }
+    return ans;
+  }
+  m=q.match(/^(.+?)\s+(কাকে|কে)\s+(?:['"]([^'"]+)['"]\s+)?(বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো|ডাকছে|বলেন|চিনতে|সম্বোধন করেছে)\s*\??$/);
+  if(m){
+    const s=m[1].trim();const quoted=m[3]||"";const verb=m[4];
+    if(ans.startsWith(s))return ans+(quoted&&!ans.includes(quoted)?` '${quoted}'`:"");
+    let obj=ans;
+    if(obj.length<20&&!/কে$/.test(obj)&&/^(বলেছে|বলে|বলল|বলতো|ডাকে|ডাকছে|বলেন|চিনতে|সম্বোধন করেছে)$/.test(verb)){
+      if(/(মা|বাবা|বোন|ভাই|দাদি|দাদা|নানা|নানি|খালা|ফুফু|চাচা|শিক্ষক|শিক্ষিকা|বন্ধু|ছেলে|মেয়ে|ছাত্র|ছাত্রী|সাথী|খোকা|খুকি|বুড়ি|লোক)$/.test(obj))obj+="কে";
+    }
+    return s+" "+obj+(quoted&&!ans.includes(quoted)?` '${quoted}'`:"")+" "+verb;
+  }
+  m=q.match(/^(সে|তিনি|তারা|[^?]+?)\s+(কোন|কোন্)\s*শ্রেণি(?:তে)?\s*পড়ে\??$/);
+  if(m){
+    const subject=m[1].trim();let cls=ans;
+    if(!/শ্রেণি/.test(cls))cls=cls+" শ্রেণিতে";
+    if(!/পড়ে/.test(cls))cls=cls+" পড়ে";
+    if(ans.startsWith("সে")||ans.startsWith(subject))return ans;
+    return subject+" "+cls;
+  }
+  m=q.match(/^কার\s+(.+?)\s*\??$/);
+  if(m&&ans.length<60){
+    const pred=m[1];
+    if(ans.includes(pred))return ans;
+    const subject=ans.replace(/জাগার আগে$/,"").trim();
+    return subject+" "+pred;
+  }
+  m=q.match(/^(.+?)\s+(কী|কি)\s*(হতে চায়|হবে|হয়|করে|করছে|করবে|খায়|পড়ে|লেখে|বলে|আছে|চায়|দেয়|বানায়|দেখে|শিখে|পারে|করেন|আছেন|কাজ করেন)?\s*\??$/);
+  if(m){
+    const s=m[1].trim();const vb=m[3]||"";
+    if(ans.startsWith(s))return ans;
+    return s+" "+ans+(vb&&!ans.endsWith(vb)?" "+vb:"");
+  }
+  m=q.match(/^(.+?)\s+(কে|কাকে)\s+(.+?করেন?|করতেন?|করছেন?|করবেন?|করে|দেখাশোনা\s*করেন?)\s*\??$/);
+  if(m){
+    const obj=m[1].trim();const vb=m[3].trim();
+    if(ans.includes(obj)&&ans.includes(vb.replace(/\s+/g,"")))return ans;
+    return ans+" "+obj+" "+vb;
+  }
+  if(/^(কখন|কবে)/.test(q))return ans;
+  if(/^(কোথায়|কোথা)/.test(q))return ans;
+  if(/^কেন/.test(q))return ans;
+  if(/^কিভাবে|^কীভাবে|^কেমনে/.test(q))return ans;
+  if(ans.length>40)return ans;
+  if(subj&&!ans.startsWith(subj))return subj+" "+ans;
+  return ans;
+}
+function lowerFirst(s){return s||"";}
+function capitalize(s){if(!s)return s;return s[0].toUpperCase()+s.slice(1);}
+function ensureFullStop(s){s=s.trim();if(!/[।!?]$/.test(s))s+="।";return s;}
+
 function tok(t){return t.toLowerCase().replace(/[।,.!?\(\)0-9০-৯—\-\n\r\t":;'"‘’“”]/g," ").split(/\s+/).filter(w=>w.length>1&&!/^(পাঠ|অনুশীলনী|অধ্যায়|লাইন|নং|নম্বর|এর|কি|কী|কে|কাকে|কারা|কয়|কোন|কোনটা|কোনটি|এই|ওই|সেই|কেন|কখন|কবে|কোথায়|কোথা|কেমন|কিভাবে|কীভাবে|টা|টি|খানা|খন|গুলো|রা|এরা|ওরা|সব|কি|যে|তা|এটা|এটি|সেটা|সেটি|ওটা|ওটি|এবং|ও|আর|বা|কিন্তু|থেকে|দিয়ে|করে|হয়|হয়েছে|হয়েছিল|হবে|ছিল|আছে|আছেন|নেই|চাই|বলে|বলেছে|বলল|করা|করি|করেন|চায়|যায়|যায়|থাকে|থাকা|করছে|করছেন|হচ্ছে|করবে|দেয়|দিয়েছে|না)$/.test(w))}
 function buildAIAnswer(q,bid){
   const qT=tok(q);
