@@ -84,6 +84,18 @@
   .ai-controls{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
   .q-meta{font-size:12px;color:var(--muted);margin-top:4px}
   @media (max-width:600px){.hero h1{font-size:22px}nav a{padding:6px 10px;font-size:13px}.logo{font-size:19px}}
+
+  .book-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:.2s;flex-wrap:wrap}
+  .book-head:hover{border-color:var(--primary);background:linear-gradient(135deg,#dcfce7,#bbf7d0)}
+  .accordion.open .book-head{border-color:var(--primary);border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .accordion.open .arrow{transform:rotate(90deg)}
+  .book-body{border:2px solid var(--primary);border-top:none;border-radius:0 0 12px 12px;padding:14px 16px 4px;background:#fff}
+  .ai-note{background:#eff6ff;border-left:4px solid #3b82f6;padding:10px 14px;border-radius:8px;margin:10px 0;font-size:14px;color:#1e40af}
+  .direct-answer{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #86efac;border-radius:12px;padding:16px;margin-bottom:14px}
+  .direct-answer .label{font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:6px;letter-spacing:.5px}
+  .direct-answer .d-text{font-size:18px;font-weight:600;color:#065f46;line-height:1.6}
+  @media (max-width:600px){.hero h1{font-size:22px}nav a{padding:6px 10px;font-size:13px}.logo{font-size:19px}.book-head{padding:10px 12px}.direct-answer .d-text{font-size:16px}}
+
 </style>
 </head>
 <body>
@@ -318,7 +330,7 @@ function filterSol(){const t=document.getElementById("solSearch").value.toLowerC
 function renderBookmarks(){
   const d=getChecked();let total=0;Object.keys(d).forEach(s=>total+=Object.keys(d[s]||{}).length);
   let h=`<div class="breadcrumb"><a onclick="route('#/')">হোম</a><span>›</span>চিহ্নিত পড়া</div>
-  <div class="card"><h1>☑️ চিহ্নিত পড়া</h1><p style="color:var(--muted)">আপনার টিক দিয়ে চিহ্নিত করা প্রশ্নসমূহ — বইভিত্তিক। মোট: <strong>${total}</strong>টি</p>
+  <div class="card"><h1>☑️ চিহ্নিত পড়া</h1><p style="color:var(--muted)">আপনার টিক দিয়ে চিহ্নিত করা প্রশ্নসমূহ। বইয়ের নামে ক্লিক করলে উত্তরসহ দেখাবে। মোট: <strong>${total}</strong>টি প্রশ্ন</p>
   ${total>0?`<button class="btn danger" onclick="clearAll()">সব টিক সরান</button>`:""}</div>`;
   if(total===0){
     h+=`<div class="card"><div class="empty">এখনো কোনো প্রশ্ন চিহ্নিত করা হয়নি।<br>সমাধান পেজে গিয়ে ☑️ টিক দিন।</div></div>`;
@@ -326,16 +338,34 @@ function renderBookmarks(){
     h+=`<div class="card">`;
     SUBJECTS.filter(s=>s.loaded).forEach(s=>{
       const items=d[s.id];if(!items||!Object.keys(items).length)return;
-      h+=`<div class="book-group"><h3>${s.icon} ${s.name} <span class="count-badge">${Object.keys(items).length}</span>
-        <button class="btn play" style="margin-left:auto" onclick="speakGroup('${s.id}')">🔊 সব শুনুন</button></h3>`;
-      Object.keys(items).forEach(k=>{const it=items[k];
-        h+=`<div class="q-block checked">
+      const n=Object.keys(items).length;
+      const gid=`bm-grp-${s.id}`;
+      h+=`<div class="book-group accordion" id="${gid}">
+        <div class="book-head" onclick="toggleBookGroup('${gid}')">
+          <span class="arrow">▶</span>
+          <span style="font-size:22px">${s.icon}</span>
+          <span style="font-weight:700;font-size:18px;color:${s.color||'var(--primary-dark)'}">${s.name}</span>
+          <span class="count-badge">${n}টি প্রশ্ন</span>
+          <button class="btn play" style="margin-left:auto" onclick="event.stopPropagation();speakGroup('${s.id}')">🔊 সব শুনুন</button>
+        </div>
+        <div class="book-body" style="display:none;padding:10px 0 4px">`;
+      Object.keys(items).forEach((k,idx)=>{const it=items[k];
+        // উত্তর খুঁজে বের করি
+        let ansText="";
+        const sol=getSolutions(s.id).find(x=>x.q===it.q);
+        if(sol)ansText=sol.a;
+        const bid=`bm-i-${s.id}-${idx}`;
+        h+=`<div class="q-block checked" id="${bid}">
           <input type="checkbox" class="chk" checked onchange="toggleCheck('${s.id}','${k}','',this);renderBookmarks();">
           <div class="q-content">
-            <div class="q"><span>${esc(it.q)}</span><span>${playButton(it.q,1)}</span></div>
+            <div class="q"><span><strong>প্রশ্ন ${idx+1}:</strong> ${esc(it.q)}</span><span>${playButton(it.q,1)}</span></div>
+            <div class="a"><span style="color:var(--primary-dark);font-weight:600;min-width:80px;">✍️ উত্তর:</span>
+              <span style="flex:1;line-height:1.9">${ansText?esc(ansText):'<span style="color:var(--muted)">উত্তর পাওয়া যায়নি</span>'}</span>
+              ${ansText?playButton(ansText,1):""}
+            </div>
             <div class="q-meta">চিহ্নিত: ${new Date(it.time).toLocaleString("bn-BD")}</div>
           </div></div>`;});
-      h+=`</div>`;
+      h+=`</div></div>`;
     });
     h+=`</div>`;
   }
@@ -356,6 +386,13 @@ function speakGroup(sid){
   speak(txt);
 }
 function remBm(id){setBookmarks(getBookmarks().filter(x=>x.id!==id));renderBookmarks()}
+function toggleBookGroup(gid){
+  const grp=document.getElementById(gid);if(!grp)return;
+  const body=grp.querySelector('.book-body');const isOpen=grp.classList.contains('open');
+  // close all
+  document.querySelectorAll('.accordion').forEach(a=>{a.classList.remove('open');const b=a.querySelector('.book-body');if(b)b.style.display='none'});
+  if(!isOpen){grp.classList.add('open');if(body)body.style.display='block';}
+}
 
 /* ============== AI Answer (Live-style synthesis from book) ============== */
 let recog=null,listening=false;
@@ -386,22 +423,157 @@ function renderSearch(){
 function doSearch(){const q=document.getElementById("qInput").value.trim();if(!q){alert("প্রথমে প্রশ্ন লিখুন বা ভয়েস দিন।");return}
   document.getElementById("step2").style.display="block";
   document.getElementById("result").innerHTML=`<p style="color:var(--muted)">⬆️ বই নির্বাচন করে 'উত্তর বের করুন' চাপুন।</p>`}
-function runAI(){
+async function runAI(){
   const q=document.getElementById("qInput").value.trim();const bid=document.getElementById("bookSelect").value;
   const box=document.getElementById("result");
-  box.innerHTML=`<div class="ai-answer"><span class="ai-badge">AI</span> উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
-  setTimeout(()=>{
+  box.innerHTML=`<h2>🤖 AI উত্তর</h2>
+    <div class="ai-answer"><span class="ai-badge">লাইভ AI</span> উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+  try{
+    // ধাপ ১: বই থেকে প্রাসঙ্গিক তথ্য সংগ্রহ (RAG context)
+    const ctx=collectContext(q,bid);
+    const subj=ctx.subjectName?`${ctx.subjectIcon} ${ctx.subjectName}`:"বই";
+    // ধাপ ২: প্রথমে দ্রুত স্মার্ট-সরাসরি উত্তর (local match দিয়ে)
+    const quick=smartDirectAnswer(q,bid);
+    // ধাপ ৩: লাইভ AI API কল (Pollinations - free, no key, CORS enabled)
+    const liveAns=await callLiveAI(q,ctx.context);
+    const finalText=(liveAns&&liveAns.text)?liveAns.text:(quick?quick.text:ctx.fallback);
+    box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
+      ${quick?`<div class="direct-answer">
+        <div class="label">✓ স্মার্ট উত্তর</div>
+        <div class="d-text">${esc(quick.text)}</div>
+      </div>`:""}
+      <div class="ai-answer">
+        <div style="margin-bottom:10px"><span class="ai-badge">লাইভ AI</span>
+        <span style="font-size:13px;color:#92400e">বিষয়: ${esc(subj)} থেকে</span>
+        <span style="float:right">${playButton(finalText)}</span></div>
+        <div style="white-space:pre-wrap;line-height:1.9">${esc(finalText)}</div>
+        ${ctx.sources.length?`<ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ctx.sources.slice(0,4).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
+      </div>
+      <div class="ai-note">💡 উত্তরটি লাইভ AI দ্বারা আপনার বইয়ের তথ্য ব্যবহার করে তৈরি করা হয়েছে।</div>
+      <div class="ai-controls">
+        <button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(finalText)}">🔊 শুনুন</button>
+        <button class="btn secondary" onclick="runAI()">🔄 নতুন করে তৈরি করুন</button>
+        <button class="btn secondary" onclick="stopSpeaking()">থামান</button>
+      </div>`;
+  }catch(err){
+    // API fail হলে local fallback
     const ans=buildAIAnswer(q,bid);
     box.innerHTML=`<h2>🤖 AI-এর উত্তর</h2>
       <div class="ai-answer">
         <div style="margin-bottom:10px"><span class="ai-badge">লাইভ AI</span>
-        <span style="font-size:13px;color:#92400e">বিষয়: ${ans.subjectIcon} ${ans.subjectName} থেকে</span>
         <span style="float:right">${playButton(ans.text)}</span></div>
         <div style="white-space:pre-wrap;line-height:1.9">${esc(ans.text)}</div>
         ${ans.sources.length?`<ul class="src-list"><strong>📚 তথ্যসূত্র:</strong>${ans.sources.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
       </div>
-      <div class="ai-controls"><button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans.text)}">🔊 মহিলা কন্ঠে শুনুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
-  },700);
+      <div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e">⚠️ লাইভ AI সংযোগ ব্যর্থ হয়েছে, বই থেকে উত্তর দেখানো হচ্ছে।</div>
+      <div class="ai-controls"><button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans.text)}">🔊 শুনুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
+  }
+}
+async function callLiveAI(q,context){
+  const sys="আপনি একজন বাংলা মাধ্যমিক শিক্ষক। শুধুমাত্র প্রদত্ত প্রসঙ্গ ব্যবহার করে বাংলায় স্পষ্ট, সংক্ষিপ্ত, প্রাকৃতিক ভাষায় উত্তর দিন। প্রশ্ন 'কে?' দিয়ে হলে সরাসরি নাম বলে 'বলেছে/বলেছেন' দিয়ে উত্তর শুরু করুন। 'কী?'/'কেন?'/'কিভাবে?' অনুযায়ী ২-৪ বাক্যে উত্তর দিন। অপ্রাসঙ্গিক তথ্য যোগ করবেন না।";
+  const user=`প্রসঙ্গ (বই থেকে):
+${context.slice(0,3000)}
+
+প্রশ্ন: ${q}
+
+উত্তর:`;
+  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),15000);
+  const r=await fetch("https://text.pollinations.ai/openai",{
+    method:"POST",signal:ctrl.signal,
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"openai",messages:[{role:"system",content:sys},{role:"user",content:user}],temperature:0.3,max_tokens:500})
+  });
+  if(!r.ok)throw new Error("API error "+r.status);
+  const j=await r.json();
+  const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||"").trim();
+  return t?{"text":t}:null;
+}
+
+/* ============ Smart direct answer (who/what/where/when) + RAG context collector ============ */
+function collectContext(q,bid){
+  const qT=tok(q);
+  const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
+  const all=[];const ctxs=[];const sources=[];let bestSubj=null,bestScore=-1;
+  books.forEach(sid=>{
+    const b=getBookContent(sid);const s=SUBJECTS.find(x=>x.id===sid);
+    (b.solutions||[]).forEach(sol=>{
+      const sc=score(qT,tok(sol.q+" "+sol.a));
+      if(sc>0){all.push({score:sc+4,text:`প্রশ্ন: ${sol.q}\nউত্তর: ${sol.a}`,src:`${s.icon} ${s.name} — সমাধান`,sid});
+        if(sc>bestScore){bestScore=sc;bestSubj=s}}
+    });
+    b.chapters.forEach(ch=>{
+      const sents=ch.body.split(/(?<=[।!?])\s+/);
+      sents.forEach((sen,i)=>{
+        const ctx=sents.slice(Math.max(0,i-1),Math.min(sents.length,i+2)).join(" ");
+        const sc=score(qT,tok(sen+" "+ctx+" "+ch.title));
+        if(sc>1){all.push({score:sc,text:`[${ch.title}] ${ctx}`,src:`${s.icon} ${s.name} — ${ch.title}`,sid});
+          if(sc>bestScore){bestScore=sc;bestSubj=s}}
+      });
+    });
+  });
+  all.sort((a,b)=>b.score-a.score);
+  const seen=new Set();
+  all.slice(0,8).forEach(t=>{
+    const k=t.text.slice(0,50);if(seen.has(k))return;seen.add(k);
+    ctxs.push(t.text);if(!sources.includes(t.src))sources.push(t.src);
+  });
+  return{
+    context:ctxs.join("\n\n"),
+    sources,
+    subjectIcon:bestSubj?bestSubj.icon:"📚",
+    subjectName:bestSubj?bestSubj.name:"",
+    fallback:`দুঃখিত, আপনার প্রশ্নের সাথে মিলে যাওয়া তথ্য বর্তমান বইগুলোতে পাওয়া যায়নি।\n\n💡 অন্যভাবে প্রশ্ন লিখে চেষ্টা করুন।`
+  };
+}
+
+function smartDirectAnswer(q,bid){
+  const qT=tok(q);const ql=q.toLowerCase();
+  const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
+  // "কে/কাকে/কারা" প্রশ্নের জন্য বিশেষ হ্যান্ডলিং
+  const asksWho = /[?\s]কে\?|কাকে|কারা|কাকে\?|কে\s/.test(q)||qT.includes("কে")||qT.includes("কাকে");
+  // প্রতিটি solution-এর উত্তর থেকে subject/object বের করার চেষ্টা
+  let bestMatch=null,bestSc=0,bestSid=null;
+  books.forEach(sid=>{
+    const sols=getSolutions(sid);const b=getBookContent(sid);
+    // solution-এ সরাসরি উত্তর মিললে
+    sols.forEach(sol=>{
+      const sc=score(qT,tok(sol.q));
+      if(sc>bestSc&&sc>=qT.length*2){bestMatch=sol;bestSc=sc;bestSid=sid;}
+    });
+    // chapter-এ বাক্য খুঁজুন যেখানে প্রশ্নের কীওয়ার্ড + স্পষ্ট উত্তর আছে
+    b.chapters.forEach(ch=>{
+      ch.body.split(/(?<=[।!?])\s+/).forEach(sen=>{
+        const sc=score(qT,tok(sen));
+        if(sc>bestSc){bestSc=sc;bestMatch={q:q,a:sen.trim(),chapter:ch.title};bestSid=sid;}
+      });
+    });
+  });
+  if(!bestMatch||bestSc<5)return null;
+  const s=SUBJECTS.find(x=>x.id===bestSid);
+  let ans=bestMatch.a.replace(/\s+/g," ").trim();
+  if(!/[।!?]$/.test(ans))ans+="।";
+
+  // "কে/কাকে" প্রশ্ন: "X কাকে Y বলেছে?" -> "X Y কে Z-কে বলেছে।" ধরনের সরাসরি উত্তর
+  if(asksWho&&bestMatch.chapter===undefined){
+    // solution উত্তর — ইতিমধ্যেই সরাসরি
+    // যেমন: "খোকা তার মাকে 'আলসে মেয়ে' বলেছে।"
+    return{text:ans};
+  }
+  // অধ্যায়ের বাক্য থেকে "কে" উত্তর: subject বুঝে সাজানো
+  if(asksWho&&bestMatch.chapter){
+    // যদি প্রশ্নে 'X কাকে Y বলেছে' ধরনের থাকে
+    const m=q.match(/(.+?)\s+(কাকে|কে)\s+(.+?)\s*(বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো)\s*\??$/);
+    if(m){
+      const who=m[1].trim();
+      // বাক্যে who খুঁজে আশেপাশ থেকে object বের করি
+      const re=new RegExp(who.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&')+"\\s+([^।,\\n]+?(?:মা|বাবা|বোন|ভাই|বন্ধু|শিক্ষক|ছেলে|মেয়ে|ছাত্র|ছাত্রী|লোক|বুড়ি|খোকা|মেয়েটি|ছেলেটি|কন্যা|পুত্র|দাদি|দাদা|নানা|নানি|খুড়ো|খালা|ফুফু|চাচা|সাথী|শিক্ষার্থী)[^।,\\n]*?)\\s+(?:বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো)","i");
+      const mm=ans.match(re);
+      if(mm){return{text:`${who} ${m[4]||'বলেছে'} ${mm[1].trim()}-${m[3].includes('মেয়ে')?'কে':''}${m[3].includes('মেয়ে')?'মেয়ে':''}।`};}
+      // সরলীকরণ: প্রাসঙ্গিক বাক্যটাই দিন
+      return{text:ans};
+    }
+  }
+  return{text:ans};
 }
 
 /* ============ AI engine — synthesizes natural teacher-style answer from book ============ */
