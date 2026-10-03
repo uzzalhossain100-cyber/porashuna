@@ -470,7 +470,7 @@ async function runAI(){
   }
 }
 async function callLiveAI(q,context){
-  const sys="আপনি একজন বাংলা মাধ্যমিক শিক্ষক। শুধুমাত্র প্রদত্ত প্রসঙ্গ ব্যবহার করে বাংলায় স্পষ্ট, সংক্ষিপ্ত, প্রাকৃতিক ভাষায় উত্তর দিন। প্রশ্ন 'কে?' দিয়ে হলে সরাসরি নাম বলে 'বলেছে/বলেছেন' দিয়ে উত্তর শুরু করুন। 'কী?'/'কেন?'/'কিভাবে?' অনুযায়ী ২-৪ বাক্যে উত্তর দিন। অপ্রাসঙ্গিক তথ্য যোগ করবেন না।";
+  const sys="আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক। নিচে প্রদত্ত প্রসঙ্গ (বই থেকে নেওয়া) ব্যবহার করে বাংলায় খুব স্পষ্ট, সাধারণ, প্রাকৃতিক ভাষায় উত্তর দিন। উত্তরের প্রথম বাক্যে সরাসরি মূল উত্তর দিন (পূর্ণ বাক্যে), তারপর সংক্ষেপে ব্যাখ্যা করুন। প্রশ্ন 'কাকে/কে ... বলেছে?' হলে অবশ্যই পূর্ণ বাক্যে লিখুন: X Y-কে 'Z' বলেছে। একক শব্দে উত্তর দেবেন না। 'কী' প্রশ্নের উত্তর পূর্ণ বাক্যে দিন। প্রসঙ্গের বাইরের কিছু যোগ করবেন না। প্রসঙ্গে স্পষ্ট উত্তর না পেলে বলুন: 'প্রদত্ত বইয়ে এই প্রশ্নের স্পষ্ট উত্তর পাওয়া যায়নি।'";
   const user=`প্রসঙ্গ (বই থেকে):
 ${context.slice(0,3000)}
 
@@ -493,91 +493,143 @@ ${context.slice(0,3000)}
 function collectContext(q,bid){
   const qT=tok(q);
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
-  const all=[];const ctxs=[];const sources=[];let bestSubj=null,bestScore=-1;
-  books.forEach(sid=>{
+  const all=[];let bestSubj=null,bestScore=-1;
+  for(const sid of books){
     const b=getBookContent(sid);const s=SUBJECTS.find(x=>x.id===sid);
-    (b.solutions||[]).forEach(sol=>{
-      const sc=score(qT,tok(sol.q+" "+sol.a));
-      if(sc>0){all.push({score:sc+4,text:`প্রশ্ন: ${sol.q}\nউত্তর: ${sol.a}`,src:`${s.icon} ${s.name} — সমাধান`,sid});
-        if(sc>bestScore){bestScore=sc;bestSubj=s}}
-    });
-    b.chapters.forEach(ch=>{
+    for(const sol of (b.solutions||[])){
+      const solBody=sol.q.split(':').pop();
+      const sc=score(qT,tok(solBody));
+      all.push({score:sc+5,text:"প্রশ্ন: "+solBody+"\nসঠিক উত্তর: "+sol.a,src:s.icon+" "+s.name+" — সমাধান",sid});
+      if(sc>bestScore){bestScore=sc;bestSubj=s}
+    }
+    for(const ch of b.chapters){
       const sents=ch.body.split(/(?<=[।!?])\s+/);
-      sents.forEach((sen,i)=>{
-        const ctx=sents.slice(Math.max(0,i-1),Math.min(sents.length,i+2)).join(" ");
-        const sc=score(qT,tok(sen+" "+ctx+" "+ch.title));
-        if(sc>1){all.push({score:sc,text:`[${ch.title}] ${ctx}`,src:`${s.icon} ${s.name} — ${ch.title}`,sid});
-          if(sc>bestScore){bestScore=sc;bestSubj=s}}
-      });
-    });
-  });
+      let chapMax=0;
+      for(let i=0;i<sents.length;i++){
+        const sen=sents[i];
+        const prev=i>0?sents[i-1]:"";
+        const next=i<sents.length-1?sents[i+1]:"";
+        const next2=i<sents.length-2?sents[i+2]:"";
+        const window=(prev+" "+sen+" "+next+" "+next2).trim();
+        const sc=score(qT,tok(sen+" "+window+" "+ch.title));
+        if(sc>chapMax)chapMax=sc;
+        if(sc>2){
+          all.push({score:sc,text:"[পাঠ: "+ch.title+"] "+window,src:s.icon+" "+s.name+" — "+ch.title,sid});
+          if(sc>bestScore){bestScore=sc;bestSubj=s}
+        }
+      }
+      if(chapMax>=qT.length*2){
+        all.push({score:chapMax*0.7,text:"["+ch.title+" — অধ্যায়ের অংশ]\n"+ch.body.slice(0,1800),src:s.icon+" "+s.name+" — "+ch.title,sid});
+      }
+    }
+  }
   all.sort((a,b)=>b.score-a.score);
-  const seen=new Set();
-  all.slice(0,8).forEach(t=>{
-    const k=t.text.slice(0,50);if(seen.has(k))return;seen.add(k);
-    ctxs.push(t.text);if(!sources.includes(t.src))sources.push(t.src);
-  });
+  const ctxs=[];const sources=[];const seen=new Set();let totalLen=0;
+  for(const t of all.slice(0,12)){
+    const k=t.text.slice(0,60);if(seen.has(k))continue;seen.add(k);
+    if(totalLen+t.text.length>4500)break;
+    ctxs.push(t.text);totalLen+=t.text.length;
+    if(sources.indexOf(t.src)<0)sources.push(t.src);
+  }
   return{
-    context:ctxs.join("\n\n"),
+    context:ctxs.join("\n\n---\n\n"),
     sources,
     subjectIcon:bestSubj?bestSubj.icon:"📚",
     subjectName:bestSubj?bestSubj.name:"",
-    fallback:`দুঃখিত, আপনার প্রশ্নের সাথে মিলে যাওয়া তথ্য বর্তমান বইগুলোতে পাওয়া যায়নি।\n\n💡 অন্যভাবে প্রশ্ন লিখে চেষ্টা করুন।`
+    fallback:"দুঃখিত, এই প্রশ্নের উত্তর বইয়ে পাওয়া যায়নি।"
   };
 }
 
 function smartDirectAnswer(q,bid){
-  const qT=tok(q);const ql=q.toLowerCase();
+  const ql=q.trim();
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
-  // "কে/কাকে/কারা" প্রশ্নের জন্য বিশেষ হ্যান্ডলিং
-  const asksWho = /[?\s]কে\?|কাকে|কারা|কাকে\?|কে\s/.test(q)||qT.includes("কে")||qT.includes("কাকে");
-  // প্রতিটি solution-এর উত্তর থেকে subject/object বের করার চেষ্টা
-  let bestMatch=null,bestSc=0,bestSid=null;
-  books.forEach(sid=>{
+  const norm=ql.replace(/[‘’]/g,"'").replace(/[“”]/g,'"');
+  // Find best match across books (solutions first priority)
+  let bestMatch=null,bestSc=0,bestSid=null,bestType=null;
+  for(const sid of books){
     const sols=getSolutions(sid);const b=getBookContent(sid);
-    // solution-এ সরাসরি উত্তর মিললে
-    sols.forEach(sol=>{
-      const sc=score(qT,tok(sol.q));
-      if(sc>bestSc&&sc>=qT.length*2){bestMatch=sol;bestSc=sc;bestSid=sid;}
-    });
-    // chapter-এ বাক্য খুঁজুন যেখানে প্রশ্নের কীওয়ার্ড + স্পষ্ট উত্তর আছে
-    b.chapters.forEach(ch=>{
-      ch.body.split(/(?<=[।!?])\s+/).forEach(sen=>{
-        const sc=score(qT,tok(sen));
-        if(sc>bestSc){bestSc=sc;bestMatch={q:q,a:sen.trim(),chapter:ch.title};bestSid=sid;}
-      });
-    });
-  });
-  if(!bestMatch||bestSc<5)return null;
-  const s=SUBJECTS.find(x=>x.id===bestSid);
-  let ans=bestMatch.a.replace(/\s+/g," ").trim();
+    for(const sol of sols){
+      const solBody=sol.q.split(':').pop();
+      const sc=score(tok(ql),tok(solBody));
+      if(sc>bestSc&&sc>=3){bestMatch=sol;bestSc=sc;bestSid=sid;bestType="solution";}
+    }
+    if(bestSc>=20)break; // strong match
+    for(const ch of b.chapters){
+      for(const sen of ch.body.split(/(?<=[।!?])\s+/)){
+        const sc=score(tok(ql),tok(sen));
+        if(sc>bestSc){bestMatch={a:sen.trim(),chapter:ch.title,q:ql};bestSc=sc;bestSid=sid;bestType="chapter";}
+      }
+    }
+    if(bestSc>=20)break;
+  }
+  if(!bestMatch||bestSc<3)return null;
+  let ans=(bestMatch.a||"").replace(/\s+/g," ").trim();
   if(!/[।!?]$/.test(ans))ans+="।";
 
-  // "কে/কাকে" প্রশ্ন: "X কাকে Y বলেছে?" -> "X Y কে Z-কে বলেছে।" ধরনের সরাসরি উত্তর
-  if(asksWho&&bestMatch.chapter===undefined){
-    // solution উত্তর — ইতিমধ্যেই সরাসরি
-    // যেমন: "খোকা তার মাকে 'আলসে মেয়ে' বলেছে।"
-    return{text:ans};
-  }
-  // অধ্যায়ের বাক্য থেকে "কে" উত্তর: subject বুঝে সাজানো
-  if(asksWho&&bestMatch.chapter){
-    // যদি প্রশ্নে 'X কাকে Y বলেছে' ধরনের থাকে
-    const m=q.match(/(.+?)\s+(কাকে|কে)\s+(.+?)\s*(বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো)\s*\??$/);
-    if(m){
-      const who=m[1].trim();
-      // বাক্যে who খুঁজে আশেপাশ থেকে object বের করি
-      const re=new RegExp(who.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&')+"\\s+([^।,\\n]+?(?:মা|বাবা|বোন|ভাই|বন্ধু|শিক্ষক|ছেলে|মেয়ে|ছাত্র|ছাত্রী|লোক|বুড়ি|খোকা|মেয়েটি|ছেলেটি|কন্যা|পুত্র|দাদি|দাদা|নানা|নানি|খুড়ো|খালা|ফুফু|চাচা|সাথী|শিক্ষার্থী)[^।,\\n]*?)\\s+(?:বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো)","i");
-      const mm=ans.match(re);
-      if(mm){return{text:`${who} ${m[4]||'বলেছে'} ${mm[1].trim()}-${m[3].includes('মেয়ে')?'কে':''}${m[3].includes('মেয়ে')?'মেয়ে':''}।`};}
-      // সরলীকরণ: প্রাসঙ্গিক বাক্যটাই দিন
+  // ---------- Build full-sentence smart answer ----------
+  if(bestType==="solution"){
+    const qbody=(bestMatch.q.split(':').pop()||ql).trim().replace(/[‘’]/g,"'");
+    // Pattern: "X কাকে 'Y' বলেছে?" → "X তার/উত্তর-কে 'Y' বলেছে।"
+    let w=qbody.match(/^(.+?)\s+(কাকে|কে)\s+(?:['"]([^'"]+)['"]\s+)?(বলেছে|বলে|বলল|ডাকে|ডাকতো|বলতো|ডাকছে|বলেন|চিনতে)\s*\??$/);
+    if(w){
+      const subj=w[1].trim();const quoted=w[3]||"";const verb=w[4];
+      let obj=ans.replace(/[।!?]/g,"").trim();
+      if(obj.length<25){
+        let objStr=obj;
+        // Add -কে postposition if it's a person noun missing it (and verb expects object)
+        const needsKe = /^(বলেছে|বলে|বলল|বলতো|ডাকে|ডাকছে|বলেন|চিনতে)$/.test(verb);
+        if(needsKe && !objStr.endsWith("কে") && !objStr.endsWith("কে?") && !objStr.endsWith("দের") && objStr.length<15){
+          if(/(মা|বাবা|বোন|ভাই|দাদি|দাদা|নানা|নানি|খালা|ফুফু|চাচা|শিক্ষক|শিক্ষিকা|বন্ধু|বন্ধব|ছেলে|মেয়ে|ছাত্র|ছাত্রী|সাথী|খোকা|খুকি|বুড়ি|লোক|ছেলেটি|মেয়েটি|কন্যা|পুত্র)$/.test(objStr)){
+            objStr+="কে";
+          }
+        }
+        const quoteStr=quoted?` '${quoted}'`:"";
+        return {text:`${subj} ${objStr}${quoteStr} ${verb}।`};
+      }
+    }
+    // Pattern: "কার X?" → "X-এর/উত্তরের X।"
+    w=qbody.match(/^কার\s+(.+?)\s*\??$/);
+    if(w){
+      const pred=w[1].trim();
+      const obj=ans.replace(/[।!?]/g,"").trim();
+      if(obj.length<30){
+        let subject=obj;
+        // If answer doesn't already end in -র/-এর/-য়ের, append -র/-এর
+        if(!/(র|ের|যের|দের|এর)$/.test(subject)&&!/(কে|যায়|হয়|করে)$/.test(subject)){
+          // Add -এর for consonant endings, -র for vowel endings
+          if(/[অআইঈউঊএঐওঔ]$/.test(subject))subject+="র";else subject+="ের";
+        }
+        return {text:`${subject} ${pred}।`};
+      }
+    }
+    // Pattern: "কখন/কবে ...?" → answer as-is if short
+    w=qbody.match(/^(কখন|কবে)\s+/);
+    if(w&&ans.length<40)return{text:ans};
+    // Pattern: "কোথায়/কোথা ...?"
+    w=qbody.match(/^(কোথায়|কোথা)\s+/);
+    if(w&&ans.length<40)return{text:ans};
+    // Pattern: "কেন ...?"
+    w=qbody.match(/^কেন\s+/);
+    if(w)return{text:ans};
+    // Pattern: "X কী/কি [verb]?" → "X [answer] [verb]।"
+    w=qbody.match(/^(.+?)\s+(কী|কি)\s*(হতে চায়|হবে|হয়|করে|করছে|করবে|খায়|পড়ে|লেখে|বলে|আছে|চায়|দেয়|বানায়|দেখে|শিখে|পারে)?\s*\??$/);
+    if(w&&ans.length<60){
+      const subj=w[1].trim();const vb=w[3]||"";
+      return {text:`${subj} ${ans.replace(/[।!?]/g,"").trim()}${vb?" "+vb:""}।`};
+    }
+    // Default: if answer is very short, try generic "X এর উত্তর: Y"
+    if(ans.length<30){
+      // Just return the answer as-is (may be a short phrase)
       return{text:ans};
     }
+    return {text:ans};
   }
-  return{text:ans};
+  // chapter sentence — use as-is
+  return {text:ans};
 }
 
 /* ============ AI engine — synthesizes natural teacher-style answer from book ============ */
-function tok(t){return t.toLowerCase().replace(/[।,.!?\(\)0-9০-৯—\-\n\r\t":;]/g," ").split(/\s+/).filter(w=>w.length>1)}
+function tok(t){return t.toLowerCase().replace(/[।,.!?\(\)0-9০-৯—\-\n\r\t":;'"‘’“”]/g," ").split(/\s+/).filter(w=>w.length>1&&!/^(পাঠ|অনুশীলনী|অধ্যায়|লাইন|নং|নম্বর|এর|কি|কী|কে|কাকে|কারা|কয়|কোন|কোনটা|কোনটি|এই|ওই|সেই|কেন|কখন|কবে|কোথায়|কোথা|কেমন|কিভাবে|কীভাবে|টা|টি|খানা|খন|গুলো|রা|এরা|ওরা|সব|কি|যে|তা|এটা|এটি|সেটা|সেটি|ওটা|ওটি|এবং|ও|আর|বা|কিন্তু|থেকে|দিয়ে|করে|হয়|হয়েছে|হয়েছিল|হবে|ছিল|আছে|আছেন|নেই|চাই|বলে|বলেছে|বলল|করা|করি|করেন|চায়|যায়|যায়|থাকে|থাকা|করছে|করছেন|হচ্ছে|করবে|দেয়|দিয়েছে|না)$/.test(w))}
 function buildAIAnswer(q,bid){
   const qT=tok(q);
   const books=bid==="all"?SUBJECTS.filter(s=>s.loaded).map(s=>s.id):[bid];
@@ -634,9 +686,21 @@ function buildAIAnswer(q,bid){
 }
 function score(qT,tT){
   if(!qT.length)return 0;
-  const set=new Set(tT);let s=0,mt=0;
-  qT.forEach(w=>{if(set.has(w)){s+=w.length*2;mt++}else for(const wt of set){if(wt.length>3&&(wt.includes(w)||w.includes(wt))){s+=w.length*.6;break}}});
-  if(mt===qT.length)s+=6;else if(mt>=Math.ceil(qT.length*.7))s+=2;
+  const set=new Set(tT);let s=0,mt=0,important=0,importantHit=0;
+  const stop=new Set(["পাঠ","অনুশীলনী","কি","কী","কে","কাকে","কার","কেন","কখন","কবে","কোথায়","কেমন","কিভাবে","এই","ওই","সেই","টা","টি","গুলো","রা","এবং","আর","বা","কিন্তু","থেকে","দিয়ে","করে","হয়","বলে","আছে","না","কি","যে","তা","এটা","সেটা"]);
+  qT.forEach(w=>{
+    if(stop.has(w))return;
+    important++;
+    if(set.has(w)){s+=w.length*3;mt++;importantHit++}
+    else{
+      for(const wt of set){
+        if(w.length>=2&&wt.length>=2&&(wt.includes(w)||w.includes(wt))){s+=Math.min(w.length,wt.length)*1.2;mt++;break}
+      }
+    }
+  });
+  if(importantHit===important&&important>0)s+=10;
+  else if(importantHit>=Math.ceil(important*.8))s+=4;
+  else if(importantHit>=Math.ceil(important*.5))s+=1;
   return s;
 }
 function has(arr,words){return arr.some(t=>words.some(w=>t.includes(w)||w.includes(t)))}
