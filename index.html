@@ -124,6 +124,7 @@
 <div class="footer">© সহজপড়া — শিক্ষা সহজেই</div>
 
 <script src="bangla-data.js"></script>
+<script src="bgs-data.js"></script>
 <script>
 const SUBJECTS=[
   {id:"bangla",name:"বাংলা",icon:"📖",color:"#dc2626",loaded:true},
@@ -131,10 +132,10 @@ const SUBJECTS=[
   {id:"math",name:"গণিত",icon:"🔢",color:"#16a34a",loaded:false},
   {id:"islam",name:"ইসলাম শিক্ষা",icon:"🕌",color:"#059669",loaded:false},
   {id:"primary",name:"প্রাথমিক জ্ঞান",icon:"🌱",color:"#d97706",loaded:false},
-  {id:"bgs",name:"বাংলাদেশ ও বিশ্বপরিচয়",icon:"🌍",color:"#7c3aed",loaded:false}
+  {id:"bgs",name:"বাংলাদেশ ও বিশ্বপরিচয়",icon:"🌍",color:"#7c3aed",loaded:true}
 ];
 const PLACEHOLDER={title:"[শীঘ্রই]",chapters:[{title:"অপেক্ষা করুন",body:"এই বইটি শীঘ্রই যুক্ত করা হবে। .txt ফাইল পাঠান।"}],solutions:[]};
-function getBookContent(s){return(s==="bangla"&&window.BANGLA_BOOK)?BANGLA_BOOK:PLACEHOLDER}
+function getBookContent(s){if(s==="bangla"&&window.BANGLA_BOOK)return BANGLA_BOOK;if(s==="bgs"&&window.BGS_BOOK)return BGS_BOOK;return PLACEHOLDER}
 function getSolutions(s){return getBookContent(s).solutions||[]}
 
 /* ============== চিহ্নিত স্টোরেজ ============== */
@@ -229,6 +230,7 @@ function renderHome(){
     <p>তৃতীয় শ্রেণীর বই, সমাধান, চিহ্নিত করা পড়া ও AI-চালিত স্মার্ট সার্চ — সবকিছু সহজেই।</p>
     <div style="margin-top:14px">
       <span class="tag">বাংলা বই সম্পূর্ণ ✅</span>
+      <span class="tag">বাংলাদেশ পরিচয় ✅</span>
       <span class="tag">টিক চিহ্নিতকরণ ☑️</span>
       <span class="tag">লাইভ AI 🤖</span>
     </div>
@@ -237,7 +239,8 @@ function renderHome(){
     <a class="tile" onclick="route('#/classes')"><div class="icon">🏫</div><div class="title">শ্রেণী পাঠ</div><div class="desc">তৃতীয় শ্রেণীর বই ও সমাধান</div></a>
     <a class="tile" onclick="route('#/search')"><div class="icon">🔍</div><div class="title">খুঁজুন (AI)</div><div class="desc">লিখে বা ভয়েসে প্রশ্ন করুন, AI উত্তর দেবে</div></a>
     <a class="tile" onclick="route('#/bookmarks')"><div class="icon">☑️</div><div class="title">চিহ্নিত পড়া</div><div class="desc">গুরুত্বপূর্ণ প্রশ্ন টিক দিয়ে রাখুন</div></a>
-    <a class="tile" onclick="route('#/book/bangla')"><div class="icon">📖</div><div class="title">আমার বাংলা বই</div><div class="desc">সম্পূর্ণ পাঠ + শব্দ শিখি + অনুশীলনী</div></a>
+    <a class="tile" onclick="route('#/book/bangla')"><div class="icon">📖</div><div class="title">আমার বাংলা বই</div><div class="desc">সম্পূর্ণ পাঠ + অনুশীলনী</div></a>
+    <a class="tile" onclick="route('#/book/bgs')"><div class="icon">🌍</div><div class="title">বাংলাদেশ ও বিশ্বপরিচয়</div><div class="desc">১২টি অধ্যায় + সমাধান</div></a>
   </div>`;
 }
 function renderClasses(){

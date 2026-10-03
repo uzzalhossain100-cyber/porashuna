@@ -2,3 +2,5 @@ build_data.py
 .DS_Store
 node_modules/
 .vercel
+bgs3.pdf
+uploads/
