@@ -459,11 +459,27 @@ function switchMode(mode){
     btn.innerHTML="✨ AI উত্তর তৈরি করুন";
   }
 }
-function doSearch(){
+let _searchAttempt=0, _lastQ="", _lastBid="";
+function doSearch(isRetry){
   const q=document.getElementById("qInput").value.trim();
   if(!q){alert("প্রথমে প্রশ্ন লিখুন বা ভয়েস দিন।");return;}
   const bid=document.getElementById("bookSelect").value;
-  if(searchMode==="direct"){runDirectSearch(q,bid);}else{runAI(q,bid);}
+  _lastQ=q;_lastBid=bid;
+  if(!isRetry)_searchAttempt=0;
+  if(searchMode==="direct"){runDirectSearch(q,bid);}else{runAI(q,bid,_searchAttempt);}
+}
+function regenerateAnswer(){
+  _searchAttempt++;
+  const q=document.getElementById("qInput").value.trim()||_lastQ;
+  const bid=document.getElementById("bookSelect").value||_lastBid;
+  if(!q){alert("আগে প্রশ্ন লিখুন।");return;}
+  _lastQ=q;_lastBid=bid;
+  // Switch to AI mode if in direct mode
+  if(searchMode!=="ai")switchMode("ai");
+  const box=document.getElementById("result");
+  box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
+    <div class="ai-answer"><span class="ai-badge">পুনরায় চেষ্টা</span> নতুন করে বুঝে উত্তর তৈরি করছি (প্রচেষ্টা ${_searchAttempt+1}) <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+  runAI(q,bid,_searchAttempt);
 }
 function runDirectSearch(q,bid){
   const box=document.getElementById("result");
@@ -504,47 +520,76 @@ function runDirectSearch(q,bid){
     if(window.markSolutionRead&&smart&&smart.solutionId){try{markSolutionRead(smart.subjectId,smart.solutionId);}catch(e){}}
   },50);
 }
-async function runAI(q,bid){
+async function runAI(q,bid,attempt){
+  attempt=attempt||0;
   const box=document.getElementById("result");
-  box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
-    <div class="ai-answer"><span class="ai-badge">উন্নত AI</span> বই থেকে বুঝে উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+  if(!box.dataset.aiLoading){
+    box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
+      <div class="ai-answer"><span class="ai-badge">${attempt>0?"পুনরায় চেষ্টা ("+(attempt+1)+")":"উন্নত AI"}</span> বই থেকে বুঝে উত্তর তৈরি করছে <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+  }
+  box.dataset.aiLoading="1";
   try{
-    // Wider context window — send more of the book
+    // Collect context — on retry, widen/slice differently to feed slightly different passages
     const ctx=collectContext(q,bid,/*wide*/true);
+    // On retry, pick different slice of context (skip a chunk from the front to give model different focus)
+    let contextForAI=ctx.context;
+    if(attempt>=1){
+      // Shuffle perspective: start later in the context, add chapter body of top source first
+      const split="\n\n---\n\n";
+      const parts=contextForAI.split(split);
+      if(parts.length>1){
+        // Move the first chunk to the end so AI sees different starting context
+        const rotated=parts.slice(1).concat([parts[0]]);
+        contextForAI=rotated.join(split);
+      }
+    }
+    if(attempt>=2){
+      // On 3rd+ attempt, use wider/narrower window shift
+      const ctx2=collectContext(q,bid,false);
+      if(ctx2.context.length>300)contextForAI=ctx2.context+"\n\n"+contextForAI.slice(0,3000);
+    }
     const smart=smartDirectAnswer(q,bid);
-    const strongSol=ctx.topSolution&&ctx.topSolution.score>=12;
+    // On retry, even a "strong" direct match we still ask AI to try crafting fresh answer (unless score >= 15 which is extremely confident)
+    const forceAI=attempt>=1;
+    const strongSol=!forceAI && ctx.topSolution&&ctx.topSolution.score>=15;
     let liveText="",liveModel="",liveErr=null;
-    _lastCtx=ctx.context;
-    // If the question has core keywords that don't appear anywhere in the collected context, skip AI entirely
+    _lastCtx=contextForAI;
     const qKeywords=extractQuestionKeywords(q);
-    const hasCoverage=contextHasKeywordCoverage(ctx.context,qKeywords);
+    const hasCoverage=contextHasKeywordCoverage(contextForAI,qKeywords);
     if(!strongSol&&!hasCoverage&&!smart){
-      // No relevant content found - don't call AI, return graceful "not in book"
+      box.dataset.aiLoading="";
       box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
         <div class="ai-note" style="background:#fef2f2;border-color:#ef4444;color:#991b1b;margin-top:12px;padding:14px;border-radius:8px">
-          <strong>⚠️ দুঃখিত, এই প্রশ্নের উত্তর বর্তমান বই/বইগুলোতে পাওয়া যায়নি।</strong><br>
-          <span style="font-size:14px;opacity:0.9">প্রশ্নের মূল বিষয় <em>"${esc(qKeywords.slice(0,3).join(", "))}"</em> সম্পর্কে বইয়ে কোনো তথ্য নেই। অনুগ্রহ করে বইয়ে থাকা বিষয় সম্পর্কে প্রশ্ন করুন, অথবা ভিন্ন ভাবে প্রশ্নটি লিখে চেষ্টা করুন। ভুল তথ্য এড়াতে উত্তর দেওয়া হচ্ছে না।</span>
+          <strong>⚠️ দুঃখিত, এই প্রশ্নের উত্তর বইয়ে পাওয়া যায়নি।</strong><br>
+          <span style="font-size:14px;opacity:0.9">প্রশ্নের মূল বিষয় <em>"${esc(qKeywords.slice(0,3).join(", "))}"</em> সম্পর্কে বইয়ে কোনো তথ্য নেই। ${attempt>0?attempt+"বার চেষ্টা করা হয়েছে, কিন্তু বইয়ে তথ্য নেই। ":""}অনুগ্রহ করে বইয়ে থাকা বিষয় সম্পর্কে প্রশ্ন করুন, অথবা ভিন্ন ভাবে প্রশ্নটি লিখুন।</span>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn secondary" onclick="doSearch()">🔄 আবার চেষ্টা করুন</button>
+          <button class="btn secondary" onclick="regenerateAnswer()">🔄 আরেকবার চেষ্টা করুন</button>
         </div>`;
       return;
     }
     if(!strongSol && hasCoverage){
-      // Two-call approach: primary model + retry with shorter prompt
-      const models=["openai","openai-fast"];
+      // Multi-attempt strategy: vary prompt style and model
+      const modelSets=[
+        ["openai"],                     // attempt 0 — default strong prompt
+        ["openai","openai-fast"],       // attempt 1 — retry both models with rotated context
+        ["openai","openai-fast"]        // attempt 2+ — final pass
+      ];
+      const models=modelSets[Math.min(attempt,modelSets.length-1)];
       let lastErr=null;
       for(const model of models){
         try{
-          const la=await callLiveAI(q,ctx.context,model);
-          if(la&&la.text&&la.text.length>5){liveText=la.text.trim();liveModel=model;break;}
+          const la = (attempt>=1)
+            ? await callLiveAIRetry(q,contextForAI,model,attempt)
+            : await callLiveAI(q,contextForAI,model);
+          if(la&&la.text&&la.text.length>5){liveText=la.text.trim();liveModel=model+(attempt>=1?" (পুনরায় "+attempt+")":"");break;}
         }catch(e){lastErr=e;}
       }
+      // Final fallback: short prompt
       if(!liveText){
-        // Retry once with shorter, simpler prompt (sometimes helps)
         try{
-          const la2=await callLiveAIShort(q,ctx.context);
-          if(la2&&la2.text&&la2.text.length>5){liveText=la2.text.trim();liveModel="openai (retried)";lastErr=null;}
+          const la2=await callLiveAIShort(q,contextForAI);
+          if(la2&&la2.text&&la2.text.length>5){liveText=la2.text.trim();liveModel="openai (সংক্ষিপ্ত প্রম্পট)";lastErr=null;}
         }catch(e){if(!lastErr)lastErr=e;}
       }
       liveErr=lastErr;
@@ -593,10 +638,13 @@ async function runAI(q,bid){
         <div class="ai-note" style="background:#eff6ff;border-color:#3b82f6;color:#1e3a8a;margin-top:10px;font-size:13px">🛡️ <strong>অ্যান্টি-হ্যালুসিনেশন:</strong> AI শুধুমাত্র বইয়ের উপরের অংশ পড়ে উত্তর দিচ্ছে। বইয়ে নেই এমন কোনো নাম/তারিখ/তথ্য বলবে না। উত্তরে বাইরের তথ্য এলে তা রঙিন বাক্যে চিহ্নিত করা হবে।</div>
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn secondary" onclick="doSearch()">🔄 নতুন করে তৈরি করুন</button>
+        <button class="btn" onclick="regenerateAnswer()">🔄 নতুন করে তৈরি করুন</button>
         <button class="btn secondary" onclick="stopSpeaking()">থামান</button>
+        <button class="btn secondary" onclick="switchMode('direct')">🔍 বই থেকে সরাসরি দেখুন</button>
       </div>`;
+    box.dataset.aiLoading="";
   }catch(err){
+    box.dataset.aiLoading="";
     const smart=smartDirectAnswer(q,bid);
     const ans=smart?smart.text:"দুঃখিত, কারিগরি সমস্যা হয়েছে।";
     box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
@@ -604,7 +652,10 @@ async function runAI(q,bid){
         <div style="margin-top:12px;display:flex;gap:8px">${playButton(ans)}<button class="btn" onclick="speak(this.dataset.t)" data-t="${attr(ans)}">🔊 শুনুন</button></div>
       </div>
       <div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-top:10px">⚠️ ত্রুটি: ${esc(String(err).slice(0,150))}</div>
-      <div style="margin-top:10px;display:flex;gap:8px"><button class="btn secondary" onclick="doSearch()">🔄 আবার চেষ্টা করুন</button><button class="btn secondary" onclick="stopSpeaking()">থামান</button></div>`;
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="regenerateAnswer()">🔄 নতুন করে তৈরি করুন</button>
+        <button class="btn secondary" onclick="stopSpeaking()">থামান</button>
+      </div>`;
   }
 }
 function toggleDetail(){const b=document.getElementById("detailBox");const btn=document.querySelector("button[onclick='toggleDetail()']");if(!b)return;const open=b.style.display!=="none";b.style.display=open?"none":"block";if(btn)btn.textContent=open?"📖 বিস্তারিত দেখুন":"📖 বিস্তারিত লুকান";}
@@ -693,6 +744,34 @@ async function callLiveAIShort(q,context){
   const sys="আপনি বাংলা প্রাথমিক শিক্ষক। দেওয়া বইয়ের অংশ থেকে প্রশ্নের উত্তর দিন। বইতে উত্তর না থাকলে শুধু [বইয়ে উত্তর নেই] লিখুন। বাইরের তথ্য যোগ করবেন না, অনুমান করবেন না। উত্তর বাংলায় ২-৩ বাক্যে দিন।";
   const user="বইয়ের অংশ:\n"+context.slice(0,7000)+"\n\nপ্রশ্ন: "+q+"\n\nবইতে উত্তর থাকলে বাংলায় দিন, না থাকলে [বইয়ে উত্তর নেই] লিখুন:";
   return await _callAI("openai",sys,user,20000,400);
+}
+async function callLiveAIRetry(q,context,model,attempt){
+  // Variation prompts — each attempt uses a slightly different instruction to encourage a genuinely fresh answer
+  const variations=[
+    // attempt 1: ask step-by-step reasoning with final answer clearly marked
+    {sys:`আপনি একজন বাংলা প্রাথমিক শিক্ষক (শ্রেণি ৩)। আপনাকে NCTB বইয়ের অংশ (প্রসঙ্গ) দেওয়া হবে এবং শিক্ষার্থীর প্রশ্ন।
+
+পদ্ধতি:
+- প্রথমে প্রসঙ্গের কোন অংশে প্রশ্নের উত্তর আছে তা নিজের জন্য চিহ্নিত করুন।
+- তারপর শুধু প্রসঙ্গের সেই অংশের ভিত্তিতে উত্তরটি ২-৪টি পূর্ণ বাক্যে বাংলায় লিখুন।
+- প্রসঙ্গে উত্তর না-থাকলে শুধু লিখুন: "[বইয়ে উত্তর নেই]" — কোনো অনুমান, ইঙ্গিত বা বাইরের তথ্য দেবেন না।
+- উত্তরের শুরুতে "উত্তর:", "প্রসঙ্গ অনুযায়ী" ইত্যাদি লিখবেন না — সরাসরি বাক্য দিয়ে শুরু করুন।
+- প্রশ্নের মূল বিষয়টি অবশ্যই উত্তরে থাকতে হবে।`,
+     user:"প্রসঙ্গ:\n"+context.slice(0,9000)+"\n\n---\n\nপ্রশ্ন: "+q+"\n\nউত্তর:"},
+    // attempt 2: bullet-first then synthesize, ask for very short concrete answer
+    {sys:`আপনি ক্লাস ৩-এর বাংলা মাধ্যমের শিক্ষক। নিচের বইয়ের অংশ থেকে শিক্ষার্থীর প্রশ্নের খুব স্পষ্ট ও সহজ উত্তর দিন।
+
+- বইয়ের বাইরে কিছু বলবেন না (নাম, তারিখ, সংখ্যা — কিছুই না)।
+- উত্তর না থাকলে শুধু লিখুন: "[বইয়ে উত্তর নেই]"।
+- ২-৩টি ছোট ছোট বাক্যে উত্তর দিন, প্রতিটি বাক্য স্পষ্ট ও পূর্ণ হবে।
+- একদম সরাসরি জবাব দিন — গোলমেলে কথা বলবেন না।`,
+     user:"বইয়ের অংশ:\n"+context.slice(0,8000)+"\n\nপ্রশ্ন: "+q+"\n\nসংক্ষেপে উত্তর:"},
+    // attempt 3+: strict, list-based
+    {sys:`আপনি NCTB বাংলা বইয়ের সহকারী। নিয়ম: (১) শুধু প্রসঙ্গের তথ্য দিয়ে উত্তর দেবেন; (২) প্রসঙ্গে না-থাকলে "[বইয়ে উত্তর নেই]" লিখবেন; (৩) উত্তর বাংলায়, ছোট বাক্যে; (৪) উত্তরে প্রশ্নের মূল শব্দটি (প্রশ্নটি যে বিষয়ে জিজ্ঞাসা করছে) অবশ্যই থাকবে।`,
+     user:"প্রসঙ্গ (বই):\n"+context.slice(0,9000)+"\n\nপ্রশ্ন: "+q+"\n\nউত্তর:"}
+  ];
+  const v=variations[Math.min(attempt-1,variations.length-1)];
+  return await _callAI(model,v.sys,v.user,25000,500);
 }
 async function _callAI(model,sys,user,timeoutMs,maxTok){
   const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),timeoutMs||25000);
