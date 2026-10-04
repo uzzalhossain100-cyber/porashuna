@@ -470,17 +470,20 @@ function runDirectSearch(q,bid){
   box.innerHTML=`<h2>🔍 বই থেকে প্রাপ্ত উত্তর</h2>
     <div style="padding:14px;background:#f9fafb;border-radius:8px;color:var(--muted)">খুঁজছি... <span class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
   setTimeout(()=>{
-    const ctx=collectContext(q,bid);
+    const ctx=collectContext(q,bid,true);
     const smart=smartDirectAnswer(q,bid);
-    // Collect top matches for "all matches" section
+    const kws=extractQuestionKeywords(q);
+    const hasCov=contextHasKeywordCoverage(ctx.context,kws);
+    // If no smart answer AND the question topic isn't even covered in the book, show a clear "not in book" notice
+    const notInBook=!smart&&!hasCov;
     const topChunks=ctx.allMatches?ctx.allMatches.slice(0,6):[];
     const sources=ctx.sources||[];
-    const answer=smart?smart.text:ctx.fallback;
+    const answer=smart?smart.text:(notInBook?`দুঃখিত, "${esc(kws.slice(0,3).join(", "))}" সম্পর্কে বইয়ে কোনো তথ্য নেই। অনুগ্রহ করে বইয়ে থাকা বিষয় সম্পর্কে প্রশ্ন করুন।`:ctx.fallback);
     const chap=smart?(smart.sourceChapterTitle||smart.chapterTitle||""):"";
     const subj=smart?(smart.subjectId?SUBJECTS.find(s=>s.id===smart.subjectId):null):null;
     box.innerHTML=`<h2>🔍 বই থেকে প্রাপ্ত উত্তর</h2>
       <div class="direct-answer">
-        <div class="label">✓ উত্তর ${subj?'<span style="font-weight:400;color:var(--muted);margin-left:8px">'+subj.icon+' '+esc(subj.name)+(chap?' · '+esc(chap):'')+'</span>':''}</div>
+        <div class="label">✓ উত্তর ${subj?'<span style="font-weight:400;color:var(--muted);margin-left:8px">'+subj.icon+' '+esc(subj.name)+(chap?' · '+esc(chap):'')+'</span>':''} ${notInBook?'<span style="background:#ef4444;color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;margin-left:6px">বইয়ে নেই</span>':''}</div>
         <div class="d-text">${esc(answer)}</div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           ${playButton(answer)}
@@ -496,7 +499,7 @@ function runDirectSearch(q,bid){
           </div>`).join("")}
         </div>`:""}
         ${sources.length?`<div style="margin-top:10px"><strong>📚 তথ্যসূত্র:</strong><ul class="src-list">${sources.slice(0,4).map(s=>`<li>${esc(s)}</li>`).join("")}</ul></div>`:""}
-        ${!smart?`<div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-top:10px">⚠️ এই প্রশ্নের সাথে হুবহু মেলে এমন কোনো তথ্য বইয়ে পাওয়া যায়নি। ভিন্ন শব্দে লিখে চেষ্টা করুন অথবা ✨ AI মোড ব্যবহার করুন।</div>`:""}
+        ${notInBook?`<div class="ai-note" style="background:#fef2f2;border-color:#ef4444;color:#991b1b;margin-top:10px">⚠️ এই প্রশ্নের মূল বিষয় (<em>${esc(kws.slice(0,3).join(", "))}</em>) বইয়ে নেই। ভুল তথ্য এড়াতে কোনো উত্তর দেওয়া হচ্ছে না। বইয়ে থাকা বিষয় (যেমন: পরিবেশ, ইতিহাস, মহাদেশ, মুক্তিযুদ্ধ, পেশা, টাকা, জরুরি পরিস্থিতি) সম্পর্কে প্রশ্ন করুন, অথবা প্রশ্নটি ভিন্নভাবে লিখুন।</div>`:(!smart?`<div class="ai-note" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-top:10px">⚠️ এই প্রশ্নের সাথে হুবহু মেলে এমন কোনো তথ্য বইয়ে পাওয়া যায়নি। ভিন্ন শব্দে লিখে চেষ্টা করুন অথবা ✨ AI মোড ব্যবহার করুন।</div>`:"")}
       </div>`;
     if(window.markSolutionRead&&smart&&smart.solutionId){try{markSolutionRead(smart.subjectId,smart.solutionId);}catch(e){}}
   },50);
@@ -509,11 +512,25 @@ async function runAI(q,bid){
     // Wider context window — send more of the book
     const ctx=collectContext(q,bid,/*wide*/true);
     const smart=smartDirectAnswer(q,bid);
-    // Strong direct match (score >= 12): we already have a perfect answer; just return it with AI style framing
     const strongSol=ctx.topSolution&&ctx.topSolution.score>=12;
     let liveText="",liveModel="",liveErr=null;
     _lastCtx=ctx.context;
-    if(!strongSol){
+    // If the question has core keywords that don't appear anywhere in the collected context, skip AI entirely
+    const qKeywords=extractQuestionKeywords(q);
+    const hasCoverage=contextHasKeywordCoverage(ctx.context,qKeywords);
+    if(!strongSol&&!hasCoverage&&!smart){
+      // No relevant content found - don't call AI, return graceful "not in book"
+      box.innerHTML=`<h2>✨ AI-এর উত্তর</h2>
+        <div class="ai-note" style="background:#fef2f2;border-color:#ef4444;color:#991b1b;margin-top:12px;padding:14px;border-radius:8px">
+          <strong>⚠️ দুঃখিত, এই প্রশ্নের উত্তর বর্তমান বই/বইগুলোতে পাওয়া যায়নি।</strong><br>
+          <span style="font-size:14px;opacity:0.9">প্রশ্নের মূল বিষয় <em>"${esc(qKeywords.slice(0,3).join(", "))}"</em> সম্পর্কে বইয়ে কোনো তথ্য নেই। অনুগ্রহ করে বইয়ে থাকা বিষয় সম্পর্কে প্রশ্ন করুন, অথবা ভিন্ন ভাবে প্রশ্নটি লিখে চেষ্টা করুন। ভুল তথ্য এড়াতে উত্তর দেওয়া হচ্ছে না।</span>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn secondary" onclick="doSearch()">🔄 আবার চেষ্টা করুন</button>
+        </div>`;
+      return;
+    }
+    if(!strongSol && hasCoverage){
       // Two-call approach: primary model + retry with shorter prompt
       const models=["openai","openai-fast"];
       let lastErr=null;
@@ -536,8 +553,8 @@ async function runAI(q,bid){
     if(strongSol&&smart){
       finalText=smart.text;confidence="high";sourceUsed="বইয়ের সমাধান থেকে (সরাসরি)";
     }else if(liveText){
-      // Verify with stricter overlap (60% content words + bigram check)
-      const {ok,reason}=verifyAnswer(liveText,ctx.context);
+      // Verify with stricter overlap + core-topic-keyword check
+      const {ok,reason}=verifyAnswer(liveText,ctx.context,q);
       if(ok){
         finalText=liveText;confidence="high";sourceUsed="বই থেকে AI-তৈরি ("+liveModel+")";
       }else if(smart){
@@ -545,10 +562,11 @@ async function runAI(q,bid){
       }else{
         finalText=ctx.fallback;confidence="low";sourceUsed="AI ও বই — উভয়ই উত্তর দিতে পারেনি";
       }
+    }else if(smart){
+      finalText=smart.text;confidence="medium";sourceUsed="AI সংযোগ ব্যর্থ/উত্তর বাতিল, বইয়ের সরাসরি উত্তর";
     }else{
-      finalText=smart?smart.text:ctx.fallback;
-      confidence=smart?"medium":"low";
-      sourceUsed=smart?"AI সংযোগ ব্যর্থ, বইয়ের সরাসরি উত্তর":"দুঃখিত, বইয়ে উত্তর নেই";
+      finalText="দুঃখিত, এই প্রশ্নের উত্তর বইয়ে পাওয়া যায়নি। অনুগ্রহ করে বইয়ে থাকা বিষয় সম্পর্কে প্রশ্ন করুন, অথবা প্রশ্নটি আরো স্পষ্টভাবে লিখুন।";
+      confidence="low";sourceUsed="বইয়ে উত্তর নেই";
     }
     const confBadge={high:"<span style=\"background:#10b981;color:#fff;padding:2px 8px;border-radius:10px;font-size:12px\">নির্ভুল</span>",
                      medium:"<span style=\"background:#f59e0b;color:#fff;padding:2px 8px;border-radius:10px;font-size:12px\">আংশিক</span>",
@@ -591,49 +609,90 @@ async function runAI(q,bid){
 }
 function toggleDetail(){const b=document.getElementById("detailBox");const btn=document.querySelector("button[onclick='toggleDetail()']");if(!b)return;const open=b.style.display!=="none";b.style.display=open?"none":"block";if(btn)btn.textContent=open?"📖 বিস্তারিত দেখুন":"📖 বিস্তারিত লুকান";}
 
-function verifyAnswer(ans,ctx){
-  // Word-overlap check (60% threshold)
+function extractQuestionKeywords(q){
+  const qs=tok(q.toLowerCase());
+  const qStop=new Set(["কি","কী","কাকে","কে","কার","কেন","কখন","কবে","কোথায়","কোথা","কেমন","কিভাবে","কীভাবে","কোন","কোনটি","কয়টি","কত","কতটি","কতগুলো","কিসের","বল","বলো","লিখ","লেখ","দাও","দিন","হয়","আছে","থাকে","করে","হয়েছিল","ছিল","সাধারণত","মধ্যে","মধ্যেকার","ও","এবং","টি","টা","এর","রা","দের","কে","কি","দাও","এ","সে","তারা","তুমি","আমি","আমরা","এই","ওই","সেই","পরা","পরে","থাকা","সম্পর্কে","বিষয়ে","ধরনের","রকম","কিরকম","এরা","কেমনে","উপর","আলোচনা","করা","উত্তর","হবে","চাই","তৈরি","বানানো","জন্য","কথা","বলা","হয়ে","থাকে","এখন","একটি","একটা","কি","কী","দের","টি","টা","মধ্যে","কি","কী","কাকে","নিয়ে","কিভাবে","কীভাবে","মতো","মত","দেখে","হয়েছে","কতক্ষণ"]);
+  const syn={"পোশাক":["পোশাক","জামা","জামা-কাপড়","কাপড়","পোষাক","পরিধান","পোশাক-পরিচ্ছদ","ড্রেস","জামাকাপড়","পোশাকের"],"পরে":["পরে","পরিধান","পরিধান করে"],"মেয়ে":["মেয়ে","মেয়েশিশু","কন্যা","বালিকা"],"ছেলে":["ছেলে","ছেলেশিশু","বালক","পুত্র"],"শিশু":["শিশু","ছাত্র","ছাত্রী","বাচ্চা","শিশুরা","শিশুদের"],"আগুন":["আগুন","অগ্নি","অগ্নিকাণ্ড"],"রাজধানী":["রাজধানী","রাজধানীর নাম"]};
+  const keywords=[];
+  for(const w of qs){
+    if(w.length<2||qStop.has(w))continue;
+    if(/^[0-9০-৯]+$/.test(w))continue;
+    // Skip common postpositions/endings
+    if(/^(দের|রা|টি|টা|এর|কে|তে|র|য়ের)$/.test(w))continue;
+    keywords.push(w);
+    if(syn[w])syn[w].forEach(s=>keywords.push(s));
+  }
+  return [...new Set(keywords)];
+}
+function contextHasKeywordCoverage(ctx,keywords){
+  if(!keywords.length)return true;
+  const ctxWords=new Set(tok(ctx));
+  let found=0;let foundCore=0;
+  // "Core" keywords = longer, specific nouns (length>=3) — must match at least 2 of them (or 1 if there's only 1)
+  const coreKws=keywords.filter(k=>k.length>=3);
+  for(const kw of keywords){
+    if(ctxWords.has(kw)||ctx.includes(kw))found++;
+  }
+  for(const kw of coreKws){
+    if(ctxWords.has(kw)||ctx.includes(kw))foundCore++;
+  }
+  // Require at least 1 core keyword AND at least 1 keyword total, AND if there are 3+ core keywords at least 2 must match
+  if(coreKws.length===0)return found>=1;
+  if(coreKws.length<=2)return foundCore>=1;
+  return foundCore>=2;
+}
+function verifyAnswer(ans,ctx,q){
   const ctxWords=new Set(tok(ctx));
   const ansTok=tok(ans);
-  const stop=new Set(["আমি","তুমি","সে","তারা","আমরা","এবং","ও","আর","বা","কিন্তু","এই","ওই","সেই","এর","কে","কি","কী","করে","হয়","আছে","পড়ে","বলে","থাকে","যায়","দেয়","না","নাই","নেই","তা","যে","তিনি","সাথে","সঙ্গে","জন্য","থেকে","দিয়ে","মধ্যে","কাছে","দিকে","রকম","তার","একটি","একটা","কিছু","অনেক","সব","এক","দুই","তিন","চার","পাঁচ","ছয়","সাত","আট","নয়","দশ","হয়েছে","বলেছে","করেন","ছিল","তাকে","এখানে","সেখানে","যারা","যাঁরা","যখন","তখন","কেন","কিভাবে","কীভাবে","হবে","হয়","উচিত","পারে","যায়","দেয়","নেয়","আসে","থাকে","হয়েছিল"]);
+  const stop=new Set(["আমি","তুমি","সে","তারা","আমরা","এবং","ও","আর","বা","কিন্তু","এই","ওই","সেই","এর","কে","কি","কী","করে","হয়","আছে","পড়ে","বলে","থাকে","যায়","দেয়","না","নাই","নেই","তা","যে","তিনি","সাথে","সঙ্গে","জন্য","থেকে","দিয়ে","মধ্যে","কাছে","দিকে","রকম","তার","একটি","একটা","কিছু","অনেক","সব","এক","দুই","তিন","চার","পাঁচ","ছয়","সাত","আট","নয়","দশ","হয়েছে","বলেছে","করেন","ছিল","তাকে","এখানে","সেখানে","যারা","যাঁরা","যখন","তখন","কেন","কিভাবে","কীভাবে","হবে","উচিত","পারে","যায়","নেয়","আসে","হয়েছিল","মধ্যে","দের","রা","এর","টি","টা"]);
   let content=0,hit=0;
-  ansTok.forEach(w=>{if(w.length<2||stop.has(w))return;content++;if(ctxWords.has(w))hit++;});
-  if(content>=3&&hit/content<0.6){return{ok:false,reason:"শব্দ-মিল কম ("+Math.round(hit*100/content)+"%)"};}
-  // Bigram check: at least 30% of 2-word pairs must appear in context
+  ansTok.forEach(w=>{if(w.length<2||stop.has(w))return;content++;if(ctxWords.has(w)||ctx.includes(w))hit++;});
+  if(content>=3&&hit/content<0.5){return{ok:false,reason:"শব্দ-মিল কম ("+Math.round(hit*100/Math.max(1,content))+"%) — উত্তরে প্রসঙ্গের বাইরের তথ্য থাকতে পারে"};}
   const ctxBig=new Set();const ctxArr=tok(ctx);
   for(let i=0;i<ctxArr.length-1;i++){if(!stop.has(ctxArr[i])&&!stop.has(ctxArr[i+1])&&ctxArr[i].length>1&&ctxArr[i+1].length>1)ctxBig.add(ctxArr[i]+" "+ctxArr[i+1]);}
   let bgC=0,bgH=0;
   for(let i=0;i<ansTok.length-1;i++){const a=ansTok[i],b=ansTok[i+1];if(stop.has(a)||stop.has(b)||a.length<2||b.length<2)continue;bgC++;if(ctxBig.has(a+" "+b))bgH++;}
-  if(bgC>=3&&bgH/bgC<0.25){return{ok:false,reason:"বাইগ্রাম-মিল কম"};}
-  // Refuse sentences: if answer claims something about famous people not in context
+  if(bgC>=3&&bgH/bgC<0.2){return{ok:false,reason:"বাক্য-মিল কম"};}
   const forbidden=/রবীন্দ্রনাথ|কাজী নজরুল|বঙ্গবন্ধু|শেখ মুজিব|মুক্তিযুদ্ধ|একুশে|২১ ফেব্রুয়ারি|১৯৭১|১৯৫২/g;
   let m;const bad=[];
   const re=new RegExp(forbidden.source,'g');
   while((m=re.exec(ans))!==null){if(!ctx.includes(m[0]))bad.push(m[0]);}
   if(bad.length>0)return{ok:false,reason:"প্রসঙ্গে নেই এমন নাম/তারিখ: "+bad.join(",")};
+  // CRITICAL: Check that answer contains at least one of the question's core topic keywords
+  const kws=extractQuestionKeywords(q||"");
+  if(kws.length>=1){
+    const ansSet=new Set(ansTok.concat(tok(ans)));
+    let kwHit=0;
+    for(const kw of kws){
+      if(ansSet.has(kw)||ans.includes(kw))kwHit++;
+    }
+    // Answer must contain at least one core content keyword from the question (otherwise it's off-topic)
+    if(kwHit===0&&kws.length>=1){
+      return{ok:false,reason:"উত্তরে প্রশ্নের মূল বিষয় ("+kws.slice(0,3).join(", ")+") উল্লেখ নেই — সম্ভবত অপ্রাসঙ্গিক"};
+    }
+  }
   return{ok:true};
 }
 
 async function callLiveAI(q,context,model){
   model=model||"openai";
-  const sys=`আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক (শ্রেণি ৩)। আপনাকে NCTB বইয়ের একটি অংশ (প্রসঙ্গ) দেওয়া হবে এবং একজন শিক্ষার্থীর প্রশ্ন।
+  const sys=`আপনি একজন বাংলা মাধ্যমিক প্রাথমিক শিক্ষক (শ্রেণি ৩)। আপনাকে NCTB বইয়ের একটি অংশ (প্রসঙ্গ) এবং একজন শিক্ষার্থীর প্রশ্ন দেওয়া হবে।
 
-অবশ্যই পালনীয় নিয়ম (ভাঙলে উত্তর বাতিল):
-1. শুধুমাত্র "প্রসঙ্গ" বিভাগে যা লেখা আছে তার ভিত্তিতে উত্তর দিন। প্রসঙ্গের বাইরের কোনো তথ্য (নাম, তারিখ, সংখ্যা, স্থান) একদম যোগ করবেন না — এমনকি আপনি নিজে জানলেও না।
-2. প্রসঙ্গে উত্তর পরিষ্কারভাবে না পেলে শুধু লিখুন: "[বইয়ে উত্তর নেই]"। অনুমান, ইঙ্গিত বা নিজের জ্ঞান ব্যবহার করবেন না।
-3. উত্তর সম্পূর্ণ বাংলায়, সহজ শ্রেণি-৩ ভাষায়, ২-৫টি পূর্ণ বাক্যে দিন।
-4. সংখ্যা ও তারিখ প্রসঙ্গে যেভাবে লেখা আছে হুবহু সেভাবে বলুন (যেমন প্রসঙ্গে "১৯৭১ সাল" লেখা থাকলে "১৯৭১" লিখবেন, "১৯৭২" বা অন্য কিছু নয়)।
-5. কবি, লেখক, বিজ্ঞানী বা ঐতিহাসিক ব্যক্তির নাম প্রসঙ্গে না থাকলে তা আনবেন না।
+সর্বোচ্চ গুরুত্বপূর্ণ নিয়ম (এগুলো ভাঙলে আপনার উত্তর বাতিল হবে):
+1. শুধুমাত্র "প্রসঙ্গ" বিভাগে যা স্পষ্টভাবে লেখা আছে তার ভিত্তিতে উত্তর দিন।
+2. প্রসঙ্গে প্রশ্নের সরাসরি উত্তর না-থাকলে অবশ্যই শুধু লিখবেন: "[বইয়ে উত্তর নেই]" — অনুমান করবেন না, নিজের জ্ঞান ব্যবহার করবেন না, ইঙ্গিত দিয়ে উত্তর বানাবেন না।
+3. প্রসঙ্গের বাইরে কোনো নাম, তারিখ, সংখ্যা, স্থান, পেশা বা বিবরণ একদম যোগ করবেন না — এমনকি আপনি নিজে জানলেও না।
+4. উত্তর অবশ্যই প্রশ্নের সাথে সরাসরি সম্পর্কিত হতে হবে। প্রশ্নটি যে বিষয়ে জিজ্ঞাসা করছে উত্তরও ঠিক সেই বিষয়ে হতে হবে (যেমন পোশাক জিজ্ঞাসা করলে পোশাকই বলবেন, আগুন বা খেলা সম্পর্কে কিছু বলবেন না)।
+5. উত্তর সম্পূর্ণ বাংলায়, সহজ শ্রেণি-৩ ভাষায়, ২-৫টি পূর্ণ বাক্যে দিন।
 6. উত্তরের শুরুতে "উত্তর:", "প্রসঙ্গ অনুযায়ী", "আমি মনে করি" ইত্যাদি লিখবেন না — সরাসরি বাক্য দিয়ে শুরু করুন।
-7. প্রশ্নের সরাসরি জবাব দিন — অপ্রাসঙ্গিক বাক্য যোগ করবেন না।`;
-  const user="প্রসঙ্গ (NCTB বইয়ের অংশ, শুধু এটাই ব্যবহার করবেন):\n"+context.slice(0,9000)+"\n\n---\n\nশিক্ষার্থীর প্রশ্ন: "+q+"\n\nউপরের প্রসঙ্গের ভিত্তিতে বাংলায় সংক্ষিপ্ত, নির্ভুল, পূর্ণবাক্যে উত্তর দিন। প্রসঙ্গে উত্তর না থাকলে শুধু লিখুন [বইয়ে উত্তর নেই]:";
-  return await _callAI(model,sys,user,25000,700);
+7. সংখ্যা/নাম/তারিখ প্রসঙ্গে যেভাবে আছে হুবহু সেভাবে দিন — পরিবর্তন বা সংশোধন করবেন না।`;
+  const user="প্রসঙ্গ (NCTB বইয়ের অংশ — শুধু এটাই ব্যবহার করবেন):\n"+context.slice(0,9000)+"\n\n---\n\nশিক্ষার্থীর প্রশ্ন: "+q+"\n\nউপরের প্রসঙ্গে প্রশ্নের সরাসরি উত্তর থাকলে বাংলায় পূর্ণবাক্যে ২-৫ বাক্যে দিন। প্রসঙ্গে উত্তর না-থাকলে শুধু লিখুন [বইয়ে উত্তর নেই]:";
+  return await _callAI(model,sys,user,25000,600);
 }
 async function callLiveAIShort(q,context){
-  // Simpler retry prompt when the main one fails or returns empty
-  const sys="আপনি একজন বাংলা প্রাথমিক শিক্ষক। নিচের বইয়ের অংশ থেকে প্রশ্নের উত্তর বাংলায় ২-৩ বাক্যে দিন। বইয়ে না থাকলে [বইয়ে উত্তর নেই] লিখুন। বাইরের তথ্য যোগ করবেন না।";
-  const user="বইয়ের অংশ:\n"+context.slice(0,6000)+"\n\nপ্রশ্ন: "+q+"\n\nউত্তর:";
-  return await _callAI("openai",sys,user,20000,500);
+  const sys="আপনি বাংলা প্রাথমিক শিক্ষক। দেওয়া বইয়ের অংশ থেকে প্রশ্নের উত্তর দিন। বইতে উত্তর না থাকলে শুধু [বইয়ে উত্তর নেই] লিখুন। বাইরের তথ্য যোগ করবেন না, অনুমান করবেন না। উত্তর বাংলায় ২-৩ বাক্যে দিন।";
+  const user="বইয়ের অংশ:\n"+context.slice(0,7000)+"\n\nপ্রশ্ন: "+q+"\n\nবইতে উত্তর থাকলে বাংলায় দিন, না থাকলে [বইয়ে উত্তর নেই] লিখুন:";
+  return await _callAI("openai",sys,user,20000,400);
 }
 async function _callAI(model,sys,user,timeoutMs,maxTok){
   const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),timeoutMs||25000);
@@ -691,19 +750,24 @@ function collectContext(q,bid,wide){
     for(const ch of b.chapters){
       const sents=ch.body.split(/(?<=[।!?])\s+/);
       let chapMax=0;
+      // Pre-score chapter title+body for keyword hits to avoid off-topic chapters dominating by single-word overlap
+      const chapText=ch.title+" "+ch.body;
+      const chapKeyHits=qT.filter(w=>w.length>2&&chapText.includes(w)).length;
       for(let i=0;i<sents.length;i++){
         const sen=sents[i];
         const prev=i>0?sents[i-1]:"";const prev2=i>1?sents[i-2]:"";
         const next=i<sents.length-1?sents[i+1]:"";const next2=i<sents.length-2?sents[i+2]:"";
         const window=(prev2+" "+prev+" "+sen+" "+next+" "+next2).trim();
         const sc=score(qT,tok(sen+" "+window+" "+ch.title));
-        if(sc>chapMax)chapMax=sc;
-        if(sc>2){
-          all.push({score:sc,text:"[পাঠ: "+ch.title+"]\n"+window,src:s.icon+" "+s.name+" — "+ch.title,sid});
-          if(sc>bestScore){bestScore=sc;bestSubj=s}
+        // Heavily penalize chunks in chapters with zero core keyword overlap (avoid off-topic matches)
+        const adjustedSc = chapKeyHits===0 && qT.length>=2 ? sc*0.1 : sc;
+        if(adjustedSc>chapMax)chapMax=adjustedSc;
+        if(adjustedSc>3){
+          all.push({score:adjustedSc,text:"[পাঠ: "+ch.title+"]\n"+window,src:s.icon+" "+s.name+" — "+ch.title,sid});
+          if(adjustedSc>bestScore){bestScore=adjustedSc;bestSubj=s}
         }
       }
-      if(chapMax>=Math.max(6,qT.length*1.5)){
+      if(chapMax>=Math.max(5,qT.length*1.2)){
         all.push({score:chapMax*0.8,text:"["+ch.title+"]\n"+ch.body.slice(0,wide?3500:2500),src:s.icon+" "+s.name+" — "+ch.title,sid});
       }
     }
@@ -770,10 +834,21 @@ function smartDirectAnswer(q,bid){
       if(sc>bestSc&&sc>=3){bestMatch={...sol,qBody:solBody};bestSc=sc;bestSid=sid;bestType="solution";bestSolId=i;bestChTitle=null;}
     }
     if(bestSc>=25)break;
+    const qKw=extractQuestionKeywords(ql);
     for(const ch of b.chapters){
+      // Skip chapters that have zero overlap with the question's core topic (off-topic prevention)
+      const chapBlob=ch.title+" "+ch.body;
+      const coreHits=qKw.filter(kw=>kw.length>=3&&(chapBlob.includes(kw)||tok(chapBlob).includes(kw))).length;
+      const chapRelevant = qKw.length===0 || (qKw.length<=2?coreHits>=1:coreHits>=2);
+      if(!chapRelevant)continue;
       for(const sen of ch.body.split(/(?<=[।!?])\s+/)){
-        const sc=score(tok(ql),tok(sen));
-        if(sc>bestSc){bestMatch={a:sen.trim(),chapter:ch.title,q:ql,qBody:ql};bestSc=sc;bestSid=sid;bestType="chapter";bestChTitle=ch.title;bestSolId=null;}
+        // Count keyword hits in the sentence window
+        const senTok=tok(sen);
+        const senKwHits=qKw.filter(kw=>sen.includes(kw)||senTok.includes(kw)).length;
+        const sc=score(tok(ql),senTok);
+        // Apply bonus/penalty based on keyword presence
+        const adjustedSc = senKwHits>=1 ? sc+senKwHits*1.5 : sc*0.3;
+        if(adjustedSc>bestSc){bestMatch={a:sen.trim(),chapter:ch.title,q:ql,qBody:ql};bestSc=adjustedSc;bestSid=sid;bestType="chapter";bestChTitle=ch.title;bestSolId=null;}
       }
     }
     if(bestSc>=25)break;
@@ -814,8 +889,16 @@ function smartDirectAnswer(q,bid){
   }
   if(bestType==="chapter"&&bestSc<12)return null;
   const one=buildFullSentence(qbody,rawA);
-  if(one)return{text:ensureFullStop(one),...meta};
-  return{text:ensureFullStop(rawA),...meta};
+  const finalText=ensureFullStop(one?one:rawA);
+  // Final sanity: if the answer doesn't contain any of the question's core keywords, reject it as off-topic
+  const qKey=extractQuestionKeywords(ql);
+  if(qKey.length>=2){
+    const ansBlob=finalText;
+    const coreHits=qKey.filter(kw=>kw.length>=3&&ansBlob.includes(kw)).length;
+    const totalHits=qKey.filter(kw=>ansBlob.includes(kw)).length;
+    if(coreHits===0&&totalHits<2)return null;
+  }
+  return{text:finalText,...meta};
 }
 function splitQuestions(q){
   const parts=[];let cur="";
